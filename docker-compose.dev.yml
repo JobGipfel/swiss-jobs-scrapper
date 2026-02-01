@@ -1,0 +1,92 @@
+# Swiss Jobs Scraper - Development Docker Compose
+# ================================================
+# Optimized for local development with hot reload
+
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # Development API Server (with hot reload)
+  # ==========================================================================
+  scraper-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: swiss-jobs-scraper-dev
+
+    # Port mapping
+    ports:
+      - "8000:8000"
+
+    # Mount source code for hot reload
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+
+    # Environment variables
+    environment:
+      - APP_ENV=development
+      - LOG_LEVEL=DEBUG
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+    # Keep stdin open for debugging
+    stdin_open: true
+    tty: true
+
+    networks:
+      - dev-network
+
+  # ==========================================================================
+  # Test Runner
+  # ==========================================================================
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: swiss-jobs-scraper-test
+
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+
+    environment:
+      - APP_ENV=test
+      - LOG_LEVEL=WARNING
+
+    # Override entrypoint to run tests
+    entrypoint: [ "pytest", "-v", "--ignore=tests/test_live_integration.py" ]
+
+    profiles:
+      - test
+
+    networks:
+      - dev-network
+
+  # ==========================================================================
+  # Redis for Development (optional caching)
+  # ==========================================================================
+  redis-dev:
+    image: redis:7-alpine
+    container_name: swiss-jobs-redis-dev
+
+    ports:
+      - "6379:6379"
+
+    command: redis-server --appendonly no
+
+    profiles:
+      - with-redis
+
+    networks:
+      - dev-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  dev-network:
+    driver: bridge
+    name: swiss-jobs-dev-network

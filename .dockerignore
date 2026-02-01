@@ -1,0 +1,74 @@
+# Docker Build Ignore
+# ====================
+# Exclude files and directories from Docker build context
+
+# Version control
+.git
+.gitignore
+.github
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Tests (not needed in production image)
+tests/
+pytest.ini
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Local config
+.env
+.env.local
+.env*.local
+*.local.yaml
+*.local.json
+
+# Data and logs
+data/
+logs/
+output/
+exports/
+tmp/
+
+# Secrets
+secrets/
+*.pem
+*.key
+credentials.json
+
+# Misc
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

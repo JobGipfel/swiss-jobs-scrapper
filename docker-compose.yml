@@ -1,0 +1,135 @@
+# Swiss Jobs Scraper Docker Configuration
+# =========================================
+# Production-ready Docker Compose setup for the scraper API
+
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # Swiss Jobs Scraper API
+  # ==========================================================================
+  scraper-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: swiss-jobs-scraper
+    restart: unless-stopped
+    
+    # Port mapping
+    ports:
+      - "${API_PORT:-8000}:8000"
+    
+    # Environment variables
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKERS=${WORKERS:-4}
+      - HOST=0.0.0.0
+      - PORT=8000
+      # Rate limiting
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100}
+      - RATE_LIMIT_PERIOD=${RATE_LIMIT_PERIOD:-60}
+      # Proxy configuration (optional)
+      - PROXY_URL=${PROXY_URL:-}
+      - PROXY_POOL=${PROXY_POOL:-}
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    
+    # Network
+    networks:
+      - scraper-network
+
+  # ==========================================================================
+  # Reverse Proxy (optional - for production with HTTPS)
+  # ==========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: swiss-jobs-nginx
+    restart: unless-stopped
+    profiles:
+      - production
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    
+    depends_on:
+      scraper-api:
+        condition: service_healthy
+    
+    networks:
+      - scraper-network
+
+  # ==========================================================================
+  # Redis Cache (optional - for caching responses)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: swiss-jobs-redis
+    restart: unless-stopped
+    profiles:
+      - with-cache
+    
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    
+    volumes:
+      - redis-data:/data
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    
+    networks:
+      - scraper-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  scraper-network:
+    driver: bridge
+    name: swiss-jobs-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  redis-data:
+    driver: local
