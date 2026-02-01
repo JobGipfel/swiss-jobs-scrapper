@@ -22,8 +22,8 @@ from typing import Any
 import click
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from swiss_jobs_scraper import __version__
 from swiss_jobs_scraper.core.models import (
@@ -35,7 +35,6 @@ from swiss_jobs_scraper.core.models import (
 )
 from swiss_jobs_scraper.core.session import ExecutionMode
 from swiss_jobs_scraper.providers import get_provider, list_providers
-
 
 console = Console()
 
@@ -61,12 +60,12 @@ def format_output(
 ) -> str:
     """
     Format data for output.
-    
+
     Args:
         data: Data to format (dict, list, or Pydantic model)
         format_type: Output format
         fields: Fields to include (for CSV/table)
-        
+
     Returns:
         Formatted string
     """
@@ -170,7 +169,11 @@ def _format_table(data: Any, fields: list[str] | None = None) -> str:
         location = _extract_field(item, "location_city")
         workload_min = _extract_field(item, "workload_min")
         workload_max = _extract_field(item, "workload_max")
-        workload = f"{workload_min}-{workload_max}%" if workload_min != workload_max else f"{workload_min}%"
+        workload = (
+            f"{workload_min}-{workload_max}%"
+            if workload_min != workload_max
+            else f"{workload_min}%"
+        )
         posted = _extract_field(item, "created_at")
         if posted:
             posted = posted[:10]  # Just the date part
@@ -244,7 +247,7 @@ def _extract_field(item: dict, field: str) -> str:
 def cli():
     """
     Swiss Jobs Scraper - Search Swiss job listings from multiple sources.
-    
+
     \b
     Examples:
         swiss-jobs search "Software Engineer" --location Zurich
@@ -259,10 +262,16 @@ def cli():
 @cli.command()
 @click.argument("query", required=False)
 @click.option("-l", "--location", help="City name or postal code")
-@click.option("-c", "--canton", "cantons", multiple=True, help="Canton code (e.g., ZH, BE)")
+@click.option(
+    "-c", "--canton", "cantons", multiple=True, help="Canton code (e.g., ZH, BE)"
+)
 @click.option("-k", "--keyword", "keywords", multiple=True, help="Additional keywords")
-@click.option("--workload-min", type=int, default=0, help="Minimum workload percentage (0-100)")
-@click.option("--workload-max", type=int, default=100, help="Maximum workload percentage (0-100)")
+@click.option(
+    "--workload-min", type=int, default=0, help="Minimum workload percentage (0-100)"
+)
+@click.option(
+    "--workload-max", type=int, default=100, help="Maximum workload percentage (0-100)"
+)
 @click.option(
     "--contract",
     type=click.Choice(["permanent", "temporary", "any"]),
@@ -278,7 +287,9 @@ def cli():
 )
 @click.option("--company", help="Filter by company name")
 @click.option("--days", type=int, default=30, help="Jobs posted within N days")
-@click.option("--profession-code", "profession_codes", multiple=True, help="AVAM profession codes")
+@click.option(
+    "--profession-code", "profession_codes", multiple=True, help="AVAM profession codes"
+)
 @click.option("--page", type=int, default=0, help="Page number (0-indexed)")
 @click.option("--page-size", type=int, default=20, help="Results per page")
 @click.option(
@@ -294,7 +305,8 @@ def cli():
     help="Response language",
 )
 @click.option(
-    "-f", "--format",
+    "-f",
+    "--format",
     "output_format",
     type=click.Choice(["json", "jsonl", "csv", "table"]),
     default="table",
@@ -331,7 +343,7 @@ def search(
 ):
     """
     Search for jobs matching the given criteria.
-    
+
     \b
     Examples:
         swiss-jobs search "Python Developer"
@@ -394,7 +406,8 @@ def search(
 @click.option("-p", "--provider", default="job_room", help="Job provider")
 @click.option("--lang", type=click.Choice(["en", "de", "fr", "it"]), default="en")
 @click.option(
-    "-f", "--format",
+    "-f",
+    "--format",
     "output_format",
     type=click.Choice(["json", "table"]),
     default="json",
@@ -408,7 +421,7 @@ def search(
 def detail(job_id: str, provider: str, lang: str, output_format: str, mode: str):
     """
     Get full details for a specific job.
-    
+
     \b
     Example:
         swiss-jobs detail abc123-def456-uuid
@@ -443,11 +456,13 @@ def detail(job_id: str, provider: str, lang: str, output_format: str, mode: str)
 
 def _print_job_detail(job):
     """Print job details in a nice format."""
-    console.print(Panel(
-        f"[bold cyan]{job.title}[/bold cyan]\n"
-        f"[green]{job.company.name}[/green] • [blue]{job.location.city}[/blue]",
-        title="Job Details",
-    ))
+    console.print(
+        Panel(
+            f"[bold cyan]{job.title}[/bold cyan]\n"
+            f"[green]{job.company.name}[/green] • [blue]{job.location.city}[/blue]",
+            title="Job Details",
+        )
+    )
 
     # Description
     if job.descriptions:
@@ -481,7 +496,9 @@ def list_providers_cmd():
     """List all available job providers."""
     providers = list_providers()
 
-    table = Table(title="Available Providers", show_header=True, header_style="bold cyan")
+    table = Table(
+        title="Available Providers", show_header=True, header_style="bold cyan"
+    )
     table.add_column("Name", style="bold white")
     table.add_column("Display Name")
     table.add_column("Status")
@@ -554,7 +571,9 @@ def serve(host: str, port: int, reload: bool):
     try:
         import uvicorn
     except ImportError:
-        console.print("[red]Error:[/red] uvicorn not installed. Run: pip install uvicorn")
+        console.print(
+            "[red]Error:[/red] uvicorn not installed. Run: pip install uvicorn"
+        )
         sys.exit(1)
 
     console.print(f"[green]Starting API server at http://{host}:{port}[/green]")

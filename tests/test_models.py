@@ -20,7 +20,7 @@ class TestJobSearchRequest:
     def test_default_values(self):
         """Test default values match Job-Room.ch platform defaults."""
         request = JobSearchRequest()
-        
+
         assert request.query is None
         assert request.keywords == []
         assert request.location is None
@@ -40,7 +40,7 @@ class TestJobSearchRequest:
             query="Software Engineer",
             location="Zürich",
         )
-        
+
         assert request.query == "Software Engineer"
         assert request.location == "Zürich"
 
@@ -63,7 +63,7 @@ class TestJobSearchRequest:
             sort=SortOrder.DATE_ASC,
             language="de",
         )
-        
+
         assert request.query == "Python Developer"
         assert request.keywords == ["Django", "FastAPI"]
         assert request.canton_codes == ["BE", "ZH"]
@@ -77,11 +77,11 @@ class TestJobSearchRequest:
         request = JobSearchRequest(workload_min=50, workload_max=80)
         assert request.workload_min == 50
         assert request.workload_max == 80
-        
+
         # Out of range
         with pytest.raises(ValidationError):
             JobSearchRequest(workload_min=-10)
-        
+
         with pytest.raises(ValidationError):
             JobSearchRequest(workload_max=150)
 
@@ -93,7 +93,7 @@ class TestJobSearchRequest:
                 distance=25,
             )
         )
-        
+
         assert request.radius_search is not None
         assert request.radius_search.geo_point.lat == 47.3769
         assert request.radius_search.geo_point.lon == 8.5417
@@ -104,11 +104,11 @@ class TestJobSearchRequest:
         # Valid coordinates
         point = GeoPoint(lat=47.3769, lon=8.5417)
         assert point.lat == 47.3769
-        
+
         # Invalid latitude
         with pytest.raises(ValidationError):
             GeoPoint(lat=100, lon=8.5417)
-        
+
         # Invalid longitude
         with pytest.raises(ValidationError):
             GeoPoint(lat=47.3769, lon=200)
@@ -120,7 +120,7 @@ class TestJobLocation:
     def test_minimal_location(self):
         """Test location with minimal data."""
         location = JobLocation(city="Zürich")
-        
+
         assert location.city == "Zürich"
         assert location.country_code == "CH"  # Default
         assert location.postal_code is None
@@ -135,7 +135,7 @@ class TestJobLocation:
             communal_code="261",
             country_code="CH",
         )
-        
+
         assert location.city == "Zürich"
         assert location.postal_code == "8000"
         assert location.canton_code == "ZH"

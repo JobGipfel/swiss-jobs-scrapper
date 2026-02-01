@@ -11,13 +11,13 @@ PROVIDERS = {
 def get_provider(name: str):
     """
     Get a provider class by name.
-    
+
     Args:
         name: Provider name (e.g., 'job_room')
-        
+
     Returns:
         Provider class
-        
+
     Raises:
         KeyError: If provider not found
     """

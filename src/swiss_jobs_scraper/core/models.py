@@ -11,7 +11,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-
 # =============================================================================
 # Enums
 # =============================================================================
@@ -90,7 +89,10 @@ class LanguageSkillFilter(BaseModel):
     """Filter by required language skills."""
 
     language_code: str = Field(
-        ..., min_length=2, max_length=2, description="ISO 639-1 language code (e.g., 'de', 'fr')"
+        ...,
+        min_length=2,
+        max_length=2,
+        description="ISO 639-1 language code (e.g., 'de', 'fr')",
     )
     spoken_level: LanguageLevel | None = None
     written_level: LanguageLevel | None = None
@@ -99,7 +101,7 @@ class LanguageSkillFilter(BaseModel):
 class JobSearchRequest(BaseModel):
     """
     Generalized job search request - works with any provider.
-    
+
     This model supports ALL filters available in job-room.ch:
     - Keywords/query
     - Location (city, postal code, canton codes, communal codes)
@@ -204,12 +206,8 @@ class JobSearchRequest(BaseModel):
 
     # === Pagination & Sorting ===
     page: int = Field(default=0, ge=0, description="Page number (0-indexed)")
-    page_size: int = Field(
-        default=20, ge=1, le=100, description="Results per page"
-    )
-    sort: SortOrder = Field(
-        default=SortOrder.DATE_DESC, description="Sort order"
-    )
+    page_size: int = Field(default=20, ge=1, le=100, description="Results per page")
+    sort: SortOrder = Field(default=SortOrder.DATE_DESC, description="Sort order")
 
     # === Response Language ===
     language: Literal["en", "de", "fr", "it"] = Field(
@@ -349,7 +347,7 @@ class JobDescription(BaseModel):
 class JobListing(BaseModel):
     """
     Standardized job listing - returned by all providers.
-    
+
     This is the normalized output format that transforms provider-specific
     data into a consistent schema.
     """

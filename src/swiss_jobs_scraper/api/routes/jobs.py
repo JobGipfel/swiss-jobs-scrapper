@@ -7,6 +7,11 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from swiss_jobs_scraper.core.exceptions import (
+    LocationNotFoundError,
+    ProviderError,
+    RateLimitError,
+)
 from swiss_jobs_scraper.core.models import (
     ContractType,
     GeoPoint,
@@ -20,13 +25,7 @@ from swiss_jobs_scraper.core.models import (
     WorkForm,
 )
 from swiss_jobs_scraper.core.session import ExecutionMode
-from swiss_jobs_scraper.core.exceptions import (
-    LocationNotFoundError,
-    ProviderError,
-    RateLimitError,
-)
 from swiss_jobs_scraper.providers import get_provider, list_providers
-
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -39,7 +38,7 @@ router = APIRouter(prefix="/jobs", tags=["Jobs"])
 class APISearchRequest(BaseModel):
     """
     API search request model.
-    
+
     Supports all Job-Room filters with proper documentation.
     """
 
@@ -216,7 +215,7 @@ class ErrorResponse(BaseModel):
 async def get_providers():
     """
     List all available job providers.
-    
+
     Returns information about each provider including capabilities.
     """
     providers_info = []
@@ -226,20 +225,22 @@ async def get_providers():
         provider = provider_cls()
         caps = provider.capabilities
 
-        providers_info.append({
-            "name": name,
-            "display_name": provider.display_name,
-            "capabilities": {
-                "radius_search": caps.supports_radius_search,
-                "canton_filter": caps.supports_canton_filter,
-                "profession_codes": caps.supports_profession_codes,
-                "language_skills": caps.supports_language_skills,
-                "company_filter": caps.supports_company_filter,
-                "work_forms": caps.supports_work_forms,
-                "max_page_size": caps.max_page_size,
-                "supported_languages": caps.supported_languages,
-            },
-        })
+        providers_info.append(
+            {
+                "name": name,
+                "display_name": provider.display_name,
+                "capabilities": {
+                    "radius_search": caps.supports_radius_search,
+                    "canton_filter": caps.supports_canton_filter,
+                    "profession_codes": caps.supports_profession_codes,
+                    "language_skills": caps.supports_language_skills,
+                    "company_filter": caps.supports_company_filter,
+                    "work_forms": caps.supports_work_forms,
+                    "max_page_size": caps.max_page_size,
+                    "supported_languages": caps.supported_languages,
+                },
+            }
+        )
 
     return {"providers": providers_info}
 
@@ -261,11 +262,11 @@ async def search_jobs(
 ):
     """
     Search for jobs matching the given criteria.
-    
+
     Supports all available filters for the selected provider.
-    
+
     ## Examples
-    
+
     **Basic search:**
     ```json
     {
@@ -273,7 +274,7 @@ async def search_jobs(
         "location": "Zürich"
     }
     ```
-    
+
     **Advanced search:**
     ```json
     {
@@ -285,7 +286,7 @@ async def search_jobs(
         "posted_within_days": 14
     }
     ```
-    
+
     **Radius search:**
     ```json
     {
@@ -345,9 +346,9 @@ async def quick_search(
 ):
     """
     Quick search endpoint with minimal parameters.
-    
+
     For simple searches without complex filters.
-    
+
     Example:
         GET /jobs/search/quick?query=Developer&location=Zurich
     """
@@ -358,7 +359,9 @@ async def quick_search(
         page_size=page_size,
     )
 
-    return await search_jobs(request, provider="job_room", mode="stealth", include_raw=False)
+    return await search_jobs(
+        request, provider="job_room", mode="stealth", include_raw=False
+    )
 
 
 @router.get(
@@ -378,14 +381,14 @@ async def get_job_details(
 ):
     """
     Get full details for a specific job.
-    
+
     Args:
         provider: Provider name (e.g., "job_room")
         job_id: Job UUID
         language: Preferred language for response
         mode: Execution mode
         include_raw: Include raw API response
-        
+
     Returns:
         Complete job listing with all details
     """
@@ -412,5 +415,3 @@ async def get_job_details(
         if "not found" in str(e).lower():
             raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
         raise HTTPException(status_code=500, detail=str(e))
-
-

@@ -11,7 +11,11 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from swiss_jobs_scraper.core.models import JobListing, JobSearchRequest, JobSearchResponse
+from swiss_jobs_scraper.core.models import (
+    JobListing,
+    JobSearchRequest,
+    JobSearchResponse,
+)
 
 
 class ProviderStatus(str, Enum):
@@ -50,14 +54,14 @@ class ProviderCapabilities(BaseModel):
 class BaseJobProvider(ABC):
     """
     Abstract base class for job data providers.
-    
+
     Each provider (job-room.ch, LinkedIn, Indeed, etc.) implements this interface
     to provide a consistent API for job searching and retrieval.
-    
+
     Usage:
         class JobRoomProvider(BaseJobProvider):
             name = "job_room"
-            
+
             async def search(self, request: JobSearchRequest) -> JobSearchResponse:
                 # Implementation...
     """
@@ -67,7 +71,7 @@ class BaseJobProvider(ABC):
     def name(self) -> str:
         """
         Unique provider identifier.
-        
+
         Returns:
             str: Provider name (e.g., 'job_room', 'linkedin')
         """
@@ -82,7 +86,7 @@ class BaseJobProvider(ABC):
     def capabilities(self) -> ProviderCapabilities:
         """
         Returns the capabilities/features supported by this provider.
-        
+
         Override in subclass to specify provider-specific capabilities.
         """
         return ProviderCapabilities()
@@ -91,13 +95,13 @@ class BaseJobProvider(ABC):
     async def search(self, request: JobSearchRequest) -> JobSearchResponse:
         """
         Search for jobs matching the given criteria.
-        
+
         Args:
             request: Search criteria including keywords, location, filters
-            
+
         Returns:
             JobSearchResponse with matching jobs and pagination info
-            
+
         Raises:
             ProviderError: If the provider encounters an error
             RateLimitError: If rate limit is exceeded
@@ -109,14 +113,14 @@ class BaseJobProvider(ABC):
     async def get_details(self, job_id: str, language: str = "en") -> JobListing:
         """
         Get full details for a specific job.
-        
+
         Args:
             job_id: Unique job identifier (usually UUID)
             language: Preferred response language
-            
+
         Returns:
             Complete JobListing with all available details
-            
+
         Raises:
             ProviderError: If job not found or provider error
         """
@@ -126,7 +130,7 @@ class BaseJobProvider(ABC):
     async def health_check(self) -> ProviderHealth:
         """
         Check if the provider is operational.
-        
+
         Returns:
             ProviderHealth with status and latency info
         """
@@ -143,7 +147,7 @@ class BaseJobProvider(ABC):
     async def close(self) -> None:
         """
         Close provider resources (HTTP sessions, etc.).
-        
+
         Override in subclass if cleanup is needed.
         """
         pass

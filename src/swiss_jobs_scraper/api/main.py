@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from swiss_jobs_scraper import __version__
 from swiss_jobs_scraper.api.routes import health, jobs
 
-
 # =============================================================================
 # Application Lifecycle
 # =============================================================================

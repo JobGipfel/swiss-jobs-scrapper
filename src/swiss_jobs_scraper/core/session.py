@@ -25,25 +25,24 @@ from swiss_jobs_scraper.core.exceptions import (
     RateLimitError,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
 class ExecutionMode(str, Enum):
     """
     Execution modes for different stealth/speed tradeoffs.
-    
+
     FAST: Minimal evasion, maximum speed
         - Basic headers only
         - No delays
         - Good for local testing
-    
+
     STEALTH: Full browser fingerprint simulation
         - Complete header set including Client Hints
         - HTTP/2 for TLS fingerprint evasion
         - Automatic CSRF handling
         - Recommended for production
-    
+
     AGGRESSIVE: Stealth + proxy rotation
         - All STEALTH features
         - Proxy rotation on each request or on error
@@ -75,7 +74,7 @@ USER_AGENTS = [
 def get_chrome_headers(version: str = "124") -> dict[str, str]:
     """
     Generate the complete set of headers that Chrome sends.
-    
+
     This includes Client Hints which are validated by modern WAFs.
     """
     return {
@@ -103,7 +102,7 @@ def get_chrome_headers(version: str = "124") -> dict[str, str]:
 class ProxyPool:
     """
     Manages proxy rotation for distributed requests.
-    
+
     In production, this would integrate with a proxy service
     (e.g., Bright Data, Oxylabs) for Swiss residential IPs.
     """
@@ -111,7 +110,7 @@ class ProxyPool:
     def __init__(self, proxies: list[str] | None = None):
         """
         Initialize proxy pool.
-        
+
         Args:
             proxies: List of proxy URLs (socks5://user:pass@host:port)
         """
@@ -144,7 +143,9 @@ class ProxyPool:
         import time
 
         self.cooldown[proxy] = time.time() + cooldown_seconds
-        logger.warning(f"Proxy {proxy[:20]}... marked for cooldown ({cooldown_seconds}s)")
+        logger.warning(
+            f"Proxy {proxy[:20]}... marked for cooldown ({cooldown_seconds}s)"
+        )
 
 
 # =============================================================================
@@ -155,14 +156,14 @@ class ProxyPool:
 class ScraperSession:
     """
     Manages HTTP sessions with security bypass capabilities.
-    
+
     Features:
     - Browser fingerprint simulation (headers, Client Hints)
     - HTTP/2 support for TLS fingerprint evasion
     - Automatic CSRF token handling
     - Retry logic with exponential backoff
     - Optional proxy rotation
-    
+
     Usage:
         async with ScraperSession(mode=ExecutionMode.STEALTH) as session:
             response = await session.get("https://example.com")
@@ -177,7 +178,7 @@ class ScraperSession:
     ):
         """
         Initialize scraper session.
-        
+
         Args:
             mode: Execution mode (FAST, STEALTH, AGGRESSIVE)
             proxy_pool: Optional proxy pool for AGGRESSIVE mode
@@ -237,19 +238,21 @@ class ScraperSession:
         # STEALTH and AGGRESSIVE use full browser simulation
         return get_chrome_headers(self._chrome_version)
 
-    async def refresh_csrf_token(self, url: str, cookie_name: str = "XSRF-TOKEN") -> str | None:
+    async def refresh_csrf_token(
+        self, url: str, cookie_name: str = "XSRF-TOKEN"
+    ) -> str | None:
         """
         Fetch CSRF token from the target site.
-        
+
         This handles Angular's XSRF protection by:
         1. Making a GET request to set the cookie
         2. Extracting the token from cookies
         3. Storing it for later injection into headers
-        
+
         Args:
             url: URL to request for CSRF token
             cookie_name: Name of the CSRF cookie
-            
+
         Returns:
             The CSRF token if found, None otherwise
         """
@@ -287,15 +290,15 @@ class ScraperSession:
     ) -> httpx.Response:
         """
         Make a GET request with retry logic.
-        
+
         Args:
             url: Request URL
             params: Query parameters
             **kwargs: Additional httpx arguments
-            
+
         Returns:
             httpx.Response
-            
+
         Raises:
             NetworkError: On connection failures
             RateLimitError: On HTTP 429
@@ -326,17 +329,17 @@ class ScraperSession:
     ) -> httpx.Response:
         """
         Make a POST request with CSRF token injection.
-        
+
         Args:
             url: Request URL
             json: JSON body
             data: Form data
             include_csrf: Whether to include CSRF header
             **kwargs: Additional httpx arguments
-            
+
         Returns:
             httpx.Response
-            
+
         Raises:
             NetworkError: On connection failures
             RateLimitError: On HTTP 429
@@ -404,15 +407,15 @@ class ScraperSession:
     ) -> httpx.Response:
         """
         Make a request with automatic CSRF token refresh on auth failure.
-        
+
         This handles the case where the CSRF token has expired.
-        
+
         Args:
             method: HTTP method (GET, POST)
             url: Request URL
             csrf_refresh_url: URL to refresh CSRF token from
             **kwargs: Request arguments
-            
+
         Returns:
             httpx.Response
         """

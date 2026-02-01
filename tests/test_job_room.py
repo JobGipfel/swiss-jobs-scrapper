@@ -2,8 +2,8 @@
 
 import pytest
 
-from swiss_jobs_scraper.providers.job_room.mapper import BFSLocationMapper
 from swiss_jobs_scraper.core.exceptions import LocationNotFoundError
+from swiss_jobs_scraper.providers.job_room.mapper import BFSLocationMapper
 
 
 class TestBFSLocationMapper:
@@ -18,18 +18,18 @@ class TestBFSLocationMapper:
         # Zürich
         codes = self.mapper.resolve("Zurich")
         assert codes == ["261"]
-        
+
         codes = self.mapper.resolve("zürich")
         assert codes == ["261"]
-        
+
         # Bern
         codes = self.mapper.resolve("Bern")
         assert codes == ["351"]
-        
+
         # Geneva
         codes = self.mapper.resolve("Geneva")
         assert codes == ["6621"]
-        
+
         codes = self.mapper.resolve("genève")
         assert codes == ["6621"]
 
@@ -38,14 +38,14 @@ class TestBFSLocationMapper:
         # Zürich postal codes
         codes = self.mapper.resolve("8000")
         assert codes == ["261"]
-        
+
         codes = self.mapper.resolve("8001")
         assert codes == ["261"]
-        
+
         # Bern postal codes
         codes = self.mapper.resolve("3000")
         assert codes == ["351"]
-        
+
         # Geneva postal codes
         codes = self.mapper.resolve("1200")
         assert codes == ["6621"]
@@ -59,7 +59,7 @@ class TestBFSLocationMapper:
         """Test that unknown locations raise error."""
         with pytest.raises(LocationNotFoundError) as exc_info:
             self.mapper.resolve("UnknownCity123")
-        
+
         assert "UnknownCity123" in str(exc_info.value)
 
     def test_resolve_safe_unknown(self):
@@ -80,7 +80,7 @@ class TestBFSLocationMapper:
     def test_get_all_cities(self):
         """Test getting all known cities."""
         cities = self.mapper.get_all_cities()
-        
+
         assert isinstance(cities, list)
         assert len(cities) > 0
         assert "zurich" in cities or "zürich" in cities
@@ -90,7 +90,7 @@ class TestBFSLocationMapper:
         codes1 = self.mapper.resolve("ZURICH")
         codes2 = self.mapper.resolve("zurich")
         codes3 = self.mapper.resolve("Zurich")
-        
+
         assert codes1 == codes2 == codes3
 
     def test_partial_match(self):
@@ -105,9 +105,9 @@ class TestJobRoomPayloadBuilder:
 
     def test_payload_structure(self):
         """Test that payload has correct structure matching Job-Room.ch platform."""
-        from swiss_jobs_scraper.core.models import JobSearchRequest, ContractType
+        from swiss_jobs_scraper.core.models import ContractType, JobSearchRequest
         from swiss_jobs_scraper.providers.job_room.client import JobRoomProvider
-        
+
         provider = JobRoomProvider()
         request = JobSearchRequest(
             query="Python Developer",
@@ -116,23 +116,23 @@ class TestJobRoomPayloadBuilder:
             workload_max=100,
             contract_type=ContractType.PERMANENT,
         )
-        
+
         payload = provider._build_search_payload(request)
-        
+
         # Check ALL required fields are present (matching platform format)
         assert "keywords" in payload
         assert "Python Developer" in payload["keywords"]
-        
+
         assert "communalCodes" in payload
         assert "261" in payload["communalCodes"]  # Zurich
-        
+
         assert "cantonCodes" in payload
         assert payload["cantonCodes"] == []
-        
+
         assert payload["workloadPercentageMin"] == 80
         assert payload["workloadPercentageMax"] == 100
         assert payload["permanent"] is True  # PERMANENT contract
-        
+
         # Platform always sends these fields
         assert "onlineSince" in payload
         assert "displayRestricted" in payload
@@ -143,12 +143,12 @@ class TestJobRoomPayloadBuilder:
         """Test default payload matches platform defaults exactly."""
         from swiss_jobs_scraper.core.models import JobSearchRequest
         from swiss_jobs_scraper.providers.job_room.client import JobRoomProvider
-        
+
         provider = JobRoomProvider()
         request = JobSearchRequest()  # All defaults
-        
+
         payload = provider._build_search_payload(request)
-        
+
         # Platform defaults
         assert payload["workloadPercentageMin"] == 10  # Platform default
         assert payload["workloadPercentageMax"] == 100
@@ -160,45 +160,49 @@ class TestJobRoomPayloadBuilder:
         assert payload["keywords"] == []
         assert payload["communalCodes"] == []
         assert payload["cantonCodes"] == []
-        
+
         # radiusSearchRequest should NOT be in payload when no location
         assert "radiusSearchRequest" not in payload
 
     def test_any_contract_type(self):
         """Test that 'any' contract type becomes null in payload."""
-        from swiss_jobs_scraper.core.models import JobSearchRequest, ContractType
+        from swiss_jobs_scraper.core.models import ContractType, JobSearchRequest
         from swiss_jobs_scraper.providers.job_room.client import JobRoomProvider
-        
+
         provider = JobRoomProvider()
         request = JobSearchRequest(
             query="Test",
             contract_type=ContractType.ANY,
         )
-        
+
         payload = provider._build_search_payload(request)
-        
+
         # 'any' should result in null/None for the API
         assert payload["permanent"] is None
 
     def test_temporary_contract(self):
         """Test temporary contract type."""
-        from swiss_jobs_scraper.core.models import JobSearchRequest, ContractType
+        from swiss_jobs_scraper.core.models import ContractType, JobSearchRequest
         from swiss_jobs_scraper.providers.job_room.client import JobRoomProvider
-        
+
         provider = JobRoomProvider()
         request = JobSearchRequest(
             query="Test",
             contract_type=ContractType.TEMPORARY,
         )
-        
+
         payload = provider._build_search_payload(request)
         assert payload["permanent"] is False
 
     def test_radius_search_in_payload(self):
         """Test radius search is included when geo coordinates are provided."""
-        from swiss_jobs_scraper.core.models import JobSearchRequest, RadiusSearchRequest, GeoPoint
+        from swiss_jobs_scraper.core.models import (
+            GeoPoint,
+            JobSearchRequest,
+            RadiusSearchRequest,
+        )
         from swiss_jobs_scraper.providers.job_room.client import JobRoomProvider
-        
+
         provider = JobRoomProvider()
         request = JobSearchRequest(
             query="Test",
@@ -207,9 +211,9 @@ class TestJobRoomPayloadBuilder:
                 distance=30,
             ),
         )
-        
+
         payload = provider._build_search_payload(request)
-        
+
         # radiusSearchRequest should be present
         assert "radiusSearchRequest" in payload
         assert payload["radiusSearchRequest"]["geoPoint"]["lat"] == 47.405
@@ -224,7 +228,7 @@ class TestJobRoomURLBuilder:
         """Test search URL construction."""
         from swiss_jobs_scraper.core.models import JobSearchRequest, SortOrder
         from swiss_jobs_scraper.providers.job_room.client import JobRoomProvider
-        
+
         provider = JobRoomProvider()
         request = JobSearchRequest(
             page=2,
@@ -232,9 +236,9 @@ class TestJobRoomURLBuilder:
             sort=SortOrder.DATE_DESC,
             language="de",
         )
-        
+
         url = provider._build_search_url(request)
-        
+
         assert "page=2" in url
         assert "size=50" in url
         assert "sort=date_desc" in url
@@ -243,7 +247,7 @@ class TestJobRoomURLBuilder:
     def test_language_encoding(self):
         """Test language parameter encoding."""
         from swiss_jobs_scraper.providers.job_room.constants import LANGUAGE_PARAMS
-        
+
         # Verify base64 encodings
         assert LANGUAGE_PARAMS["en"] == "ZW4="
         assert LANGUAGE_PARAMS["de"] == "ZGU="

@@ -21,8 +21,8 @@ from swiss_jobs_scraper.core.models import (
     ApplicationChannel,
     CompanyInfo,
     ContactInfo,
-    Coordinates,
     ContractType,
+    Coordinates,
     EmploymentDetails,
     JobDescription,
     JobListing,
@@ -49,18 +49,17 @@ from swiss_jobs_scraper.providers.job_room.constants import (
 )
 from swiss_jobs_scraper.providers.job_room.mapper import BFSLocationMapper
 
-
 logger = logging.getLogger(__name__)
 
 
 class JobRoomProvider(BaseJobProvider):
     """
     Job-room.ch API provider.
-    
+
     Implements the BaseJobProvider interface for accessing Swiss federal
     job portal data. Supports all available filters and handles the
     Angular CSRF security mechanism.
-    
+
     Usage:
         async with JobRoomProvider() as provider:
             response = await provider.search(JobSearchRequest(
@@ -68,7 +67,7 @@ class JobRoomProvider(BaseJobProvider):
                 location="Zürich",
                 workload_min=80
             ))
-            
+
             for job in response.items:
                 print(f"{job.title} at {job.company.name}")
     """
@@ -81,7 +80,7 @@ class JobRoomProvider(BaseJobProvider):
     ):
         """
         Initialize Job-Room provider.
-        
+
         Args:
             mode: Execution mode for security bypass
             proxy_pool: Optional proxy pool for AGGRESSIVE mode
@@ -151,7 +150,7 @@ class JobRoomProvider(BaseJobProvider):
     async def search(self, request: JobSearchRequest) -> JobSearchResponse:
         """
         Search for jobs on job-room.ch.
-        
+
         Supports ALL available filters:
         - Keywords/query
         - Location (resolved to BFS codes)
@@ -164,10 +163,10 @@ class JobRoomProvider(BaseJobProvider):
         - Company name
         - Posted within N days
         - Language skills
-        
+
         Args:
             request: Search criteria
-            
+
         Returns:
             JobSearchResponse with paginated results
         """
@@ -190,7 +189,7 @@ class JobRoomProvider(BaseJobProvider):
 
             # Parse response
             data = response.json()
-            
+
             # Handle different response formats
             if isinstance(data, list):
                 # Direct list of jobs
@@ -201,7 +200,9 @@ class JobRoomProvider(BaseJobProvider):
                 jobs = data.get("content", data.get("jobAdvertisements", []))
                 total_count = data.get("totalElements", len(jobs))
             else:
-                raise ResponseParseError(self.name, f"Unexpected response format: {type(data)}")
+                raise ResponseParseError(
+                    self.name, f"Unexpected response format: {type(data)}"
+                )
 
             # Transform to generalized format
             items = [self._transform_job(job) for job in jobs]
@@ -226,7 +227,7 @@ class JobRoomProvider(BaseJobProvider):
     def _build_search_payload(self, request: JobSearchRequest) -> dict[str, Any]:
         """
         Build the API request payload with all filters.
-        
+
         The job-room.ch API is strict about types - communalCodes must be
         string arrays, boolean fields must be actual booleans or null, etc.
         """
@@ -278,30 +279,23 @@ class JobRoomProvider(BaseJobProvider):
             # Workload - always included
             "workloadPercentageMin": request.workload_min,
             "workloadPercentageMax": request.workload_max,
-            
             # Contract type - null = any, true = permanent, false = temporary
             "permanent": permanent,
-            
             # Company filter - null if not specified
             "companyName": request.company_name,
-            
             # Time filter - days since posting
             "onlineSince": request.posted_within_days,
-            
             # Display restricted jobs
             "displayRestricted": request.display_restricted,
-            
             # Profession codes - always include (can be empty array)
             "professionCodes": list(request.profession_codes),
-            
             # Keywords - always include (can be empty array)
             "keywords": keywords if keywords else [],
-            
             # Location filters - always include (can be empty arrays)
             "communalCodes": communal_codes if communal_codes else [],
             "cantonCodes": list(request.canton_codes) if request.canton_codes else [],
         }
-        
+
         # Add radius search ONLY when location is set (matching platform behavior)
         if radius_search:
             payload["radiusSearchRequest"] = radius_search
@@ -339,11 +333,11 @@ class JobRoomProvider(BaseJobProvider):
     async def get_details(self, job_id: str, language: str = "en") -> JobListing:
         """
         Get full details for a specific job.
-        
+
         Args:
             job_id: Job UUID
             language: Preferred language for response
-            
+
         Returns:
             Complete JobListing with all details
         """
@@ -412,7 +406,7 @@ class JobRoomProvider(BaseJobProvider):
     def _transform_job(self, raw: dict[str, Any]) -> JobListing:
         """
         Transform job-room.ch response to generalized JobListing.
-        
+
         Handles the nested structure of the API response and normalizes
         all fields to the standardized schema.
         """
@@ -423,17 +417,19 @@ class JobRoomProvider(BaseJobProvider):
         # Extract descriptions (multilingual)
         descriptions = []
         for desc in content.get("jobDescriptions", []):
-            descriptions.append(JobDescription(
-                language_code=desc.get("languageIsoCode", "en"),
-                title=desc.get("title", ""),
-                description=desc.get("description", ""),
-            ))
+            descriptions.append(
+                JobDescription(
+                    language_code=desc.get("languageIsoCode", "en"),
+                    title=desc.get("title", ""),
+                    description=desc.get("description", ""),
+                )
+            )
 
         # Get primary title
         title = ""
         if descriptions:
             title = descriptions[0].title
-        
+
         # Extract company info
         company_data = content.get("company", {})
         company = CompanyInfo(
@@ -489,52 +485,69 @@ class JobRoomProvider(BaseJobProvider):
         # Extract occupations
         occupations = []
         for occ in content.get("occupations", []):
-            occupations.append(Occupation(
-                avam_code=occ.get("avamOccupationCode", ""),
-                work_experience=occ.get("workExperience"),
-                education_code=occ.get("educationCode"),
-                qualification_code=occ.get("qualificationCode"),
-            ))
+            occupations.append(
+                Occupation(
+                    avam_code=occ.get("avamOccupationCode", ""),
+                    work_experience=occ.get("workExperience"),
+                    education_code=occ.get("educationCode"),
+                    qualification_code=occ.get("qualificationCode"),
+                )
+            )
 
         # Extract language skills
         language_skills = []
         for ls in content.get("languageSkills", []):
-            language_skills.append(LanguageSkill(
-                language_code=ls.get("languageIsoCode", ""),
-                spoken_level=ls.get("spokenLevel"),
-                written_level=ls.get("writtenLevel"),
-            ))
+            language_skills.append(
+                LanguageSkill(
+                    language_code=ls.get("languageIsoCode", ""),
+                    spoken_level=ls.get("spokenLevel"),
+                    written_level=ls.get("writtenLevel"),
+                )
+            )
 
         # Extract contact info
         contact_data = content.get("publicContact", {})
-        contact = ContactInfo(
-            salutation=contact_data.get("salutation"),
-            first_name=contact_data.get("firstName"),
-            last_name=contact_data.get("lastName"),
-            phone=contact_data.get("phone"),
-            email=contact_data.get("email"),
-        ) if contact_data else None
+        contact = (
+            ContactInfo(
+                salutation=contact_data.get("salutation"),
+                first_name=contact_data.get("firstName"),
+                last_name=contact_data.get("lastName"),
+                phone=contact_data.get("phone"),
+                email=contact_data.get("email"),
+            )
+            if contact_data
+            else None
+        )
 
         # Extract application channel
         apply_data = content.get("applyChannel", {})
-        application = ApplicationChannel(
-            email=apply_data.get("emailAddress"),
-            phone=apply_data.get("phoneNumber"),
-            form_url=apply_data.get("formUrl"),
-            post_address=apply_data.get("postAddress") or apply_data.get("rawPostAddress"),
-            additional_info=apply_data.get("additionalInfo"),
-        ) if apply_data else None
+        application = (
+            ApplicationChannel(
+                email=apply_data.get("emailAddress"),
+                phone=apply_data.get("phoneNumber"),
+                form_url=apply_data.get("formUrl"),
+                post_address=apply_data.get("postAddress")
+                or apply_data.get("rawPostAddress"),
+                additional_info=apply_data.get("additionalInfo"),
+            )
+            if apply_data
+            else None
+        )
 
         # Extract publication info
         pub_data = job.get("publication", {})
-        publication = PublicationInfo(
-            start_date=pub_data.get("startDate", ""),
-            end_date=pub_data.get("endDate", ""),
-            public_display=pub_data.get("publicDisplay", True),
-            eures_display=pub_data.get("euresDisplay", False),
-            company_anonymous=pub_data.get("companyAnonymous", False),
-            restricted_display=pub_data.get("restrictedDisplay", False),
-        ) if pub_data else None
+        publication = (
+            PublicationInfo(
+                start_date=pub_data.get("startDate", ""),
+                end_date=pub_data.get("endDate", ""),
+                public_display=pub_data.get("publicDisplay", True),
+                eures_display=pub_data.get("euresDisplay", False),
+                company_anonymous=pub_data.get("companyAnonymous", False),
+                restricted_display=pub_data.get("restrictedDisplay", False),
+            )
+            if pub_data
+            else None
+        )
 
         # Parse timestamps
         created_at = None

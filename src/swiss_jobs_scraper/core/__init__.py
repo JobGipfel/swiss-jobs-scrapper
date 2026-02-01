@@ -1,24 +1,24 @@
 """Core module containing base classes and shared functionality."""
 
+from swiss_jobs_scraper.core.exceptions import (
+    AuthenticationError,
+    LocationNotFoundError,
+    ProviderError,
+    RateLimitError,
+    ScraperError,
+    ValidationError,
+)
 from swiss_jobs_scraper.core.models import (
-    JobSearchRequest,
-    JobSearchResponse,
-    JobListing,
-    JobLocation,
-    EmploymentDetails,
+    ApplicationChannel,
     CompanyInfo,
     ContactInfo,
-    ApplicationChannel,
+    EmploymentDetails,
+    JobListing,
+    JobLocation,
+    JobSearchRequest,
+    JobSearchResponse,
 )
 from swiss_jobs_scraper.core.provider import BaseJobProvider, ProviderHealth
-from swiss_jobs_scraper.core.exceptions import (
-    ScraperError,
-    ProviderError,
-    AuthenticationError,
-    RateLimitError,
-    ValidationError,
-    LocationNotFoundError,
-)
 
 __all__ = [
     "JobSearchRequest",
