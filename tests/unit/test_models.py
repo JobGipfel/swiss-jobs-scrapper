@@ -1,4 +1,8 @@
-"""Tests for core models."""
+"""
+Unit tests for core models.
+
+These tests verify Pydantic model validation and serialization.
+"""
 
 import pytest
 from pydantic import ValidationError

@@ -1,4 +1,8 @@
-"""Tests for REST API endpoints."""
+"""
+Integration tests for REST API endpoints.
+
+These tests use FastAPI's TestClient to test API behavior without network calls.
+"""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -126,6 +130,19 @@ class TestJobDetailEndpoints:
         response = client.get("/jobs/job_room/test-uuid?language=de")
 
         assert response.status_code in [404, 500]
+
+
+class TestDatabaseEndpoints:
+    """Tests for database-related endpoints."""
+
+    def test_stats_endpoint_no_db(self, client):
+        """Test stats endpoint returns without database."""
+        response = client.get("/jobs/stats")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_jobs" in data
+        assert "enabled" in data
 
 
 class TestAPIDocumentation:

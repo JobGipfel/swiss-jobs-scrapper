@@ -11,6 +11,8 @@ A production-grade, extensible job scraper for Swiss job markets. Currently supp
 - **🔌 Dual Interface**: Both CLI and REST API
 - **📊 Multiple Output Formats**: JSON, JSONL, CSV, or pretty tables
 - **🧩 Extensible**: Abstract provider interface for adding new job sources
+- **💾 Database Storage**: Optional PostgreSQL integration for job persistence *(NEW)*
+- **🤖 AI Processing**: Optional AI-powered translation and experience level extraction *(NEW)*
 
 ## Installation
 
@@ -34,6 +36,19 @@ poetry shell
 pip install -e .
 ```
 
+### Optional Features
+
+```bash
+# Install with PostgreSQL support
+pip install -e ".[database]"
+
+# Install with AI processing support
+pip install -e ".[ai]"
+
+# Install with all optional features
+pip install -e ".[all]"
+```
+
 ## Quick Start
 
 ### CLI Usage
@@ -52,6 +67,12 @@ swiss-jobs search "Data Scientist" \
     --days 14 \
     --format json
 
+# Search and save to database
+swiss-jobs search "Engineer" --save
+
+# Search with AI processing
+swiss-jobs search "Engineer" --ai
+
 # Get job details
 swiss-jobs detail <job-uuid>
 
@@ -63,6 +84,12 @@ swiss-jobs health
 
 # Start API server
 swiss-jobs serve --port 8000
+
+# Process stored jobs with AI
+swiss-jobs process --limit 100
+
+# View database statistics
+swiss-jobs stats
 ```
 
 ### API Usage
@@ -84,6 +111,17 @@ curl -X POST http://localhost:8000/jobs/search \
         "workload_min": 80,
         "contract_type": "permanent"
     }'
+
+# Search with persistence and AI processing
+curl -X POST "http://localhost:8000/jobs/search?persist=true&ai_process=true" \
+    -H "Content-Type: application/json" \
+    -d '{"query": "Python Developer"}'
+
+# Process stored jobs with AI
+curl -X POST "http://localhost:8000/jobs/process?limit=100"
+
+# Get database stats
+curl http://localhost:8000/jobs/stats
 
 # Get job details
 curl http://localhost:8000/jobs/job_room/{job-uuid}
@@ -129,6 +167,112 @@ async def main():
 asyncio.run(main())
 ```
 
+## Database Storage (Optional)
+
+Persist job listings to PostgreSQL with automatic deduplication and change detection.
+
+### Configuration
+
+```bash
+# Option 1: Full connection URL
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/swiss_jobs
+
+# Option 2: Individual components
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=swiss_jobs
+DATABASE_USER=postgres
+DATABASE_PASSWORD=your_password
+```
+
+### Features
+
+- **Auto-migration**: Tables are created automatically on first connection
+- **Upsert logic**: Uses content hashing to detect new vs. updated jobs
+- **Change tracking**: `date_updated` timestamp tracks when jobs change
+
+### Usage
+
+```bash
+# CLI: Save search results to database
+swiss-jobs search "Engineer" --save
+
+# API: Include persist flag
+curl -X POST "http://localhost:8000/jobs/search?persist=true" ...
+```
+
+### Python Example
+
+```python
+from swiss_jobs_scraper.storage import get_repository
+
+async def save_jobs(jobs):
+    repo = await get_repository()
+    result = await repo.upsert_jobs(jobs)
+    print(f"Inserted: {result['inserted']}, Updated: {result['updated']}")
+```
+
+## AI Post-Processing (Optional)
+
+Enhance job listings with AI-powered translation and analysis.
+
+### Configuration
+
+```bash
+# Choose provider: gemini or groq
+AI_PROVIDER=gemini
+
+# API key
+AI_API_KEY=your_api_key_here
+
+# Optional: Override default model
+AI_MODEL=gemini-1.5-flash
+```
+
+### Supported Providers
+
+| Provider | Default Model | Cost |
+|----------|---------------|------|
+| `gemini` | `gemini-1.5-flash` | Free tier available |
+| `groq` | `llama-3.3-70b-versatile` | Very fast, free tier |
+
+### AI Features
+
+- **Translation**: Translates title and description to DE, FR, IT, EN
+- **Language Extraction**: Identifies required languages from job text
+- **Experience Level**: Determines level based on actual requirements, not job titles
+  - Levels: `entry`, `junior`, `mid`, `senior`, `lead`, `principal`
+
+### Usage
+
+```bash
+# CLI: Apply AI processing to search results
+swiss-jobs search "Developer" --ai
+
+# CLI: Process stored jobs in database
+swiss-jobs process --limit 100
+
+# API: Include ai_process flag
+curl -X POST "http://localhost:8000/jobs/search?ai_process=true" ...
+
+# API: Process stored jobs
+curl -X POST "http://localhost:8000/jobs/process?limit=100"
+```
+
+### Python Example
+
+```python
+from swiss_jobs_scraper.ai import get_processor
+
+async def process_jobs(jobs):
+    processor = get_processor()
+    if processor.is_enabled:
+        results = await processor.process_jobs(jobs)
+        for job, result in zip(jobs, results):
+            print(f"Title (EN): {result.title_en}")
+            print(f"Experience: {result.experience_level}")
+```
+
 ## Search Filters
 
 The scraper matches the exact payload format of job-room.ch:
@@ -147,46 +291,6 @@ The scraper matches the exact payload format of job-room.ch:
 | Display Restricted | - | `display_restricted` | `false` | Include restricted visibility jobs |
 | Profession Codes | `--profession-code` | `profession_codes` | `[]` | AVAM profession codes |
 | Geo Radius | - | `radius_search` | `null` | Geo-based search (lat, lon, distance) |
-
-### API Payload Format
-
-The scraper sends the **exact payload format** used by job-room.ch:
-
-```json
-{
-  "workloadPercentageMin": 10,
-  "workloadPercentageMax": 100,
-  "permanent": null,
-  "companyName": null,
-  "onlineSince": 60,
-  "displayRestricted": false,
-  "professionCodes": [],
-  "keywords": [],
-  "communalCodes": [],
-  "cantonCodes": []
-}
-```
-
-With location set (e.g., Basel):
-
-```json
-{
-  "workloadPercentageMin": 10,
-  "workloadPercentageMax": 100,
-  "permanent": null,
-  "companyName": null,
-  "onlineSince": 60,
-  "displayRestricted": false,
-  "professionCodes": [],
-  "keywords": [],
-  "communalCodes": ["243"],
-  "cantonCodes": [],
-  "radiusSearchRequest": {
-    "geoPoint": {"lat": 47.405, "lon": 8.404},
-    "distance": 30
-  }
-}
-```
 
 ## Docker Deployment
 
@@ -220,7 +324,16 @@ API_PORT=8000
 WORKERS=4
 LOG_LEVEL=INFO
 RATE_LIMIT_REQUESTS=100
+
+# Optional: Proxy configuration
 # PROXY_URL=socks5://proxy:1080
+
+# Optional: Database
+# DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/swiss_jobs
+
+# Optional: AI Processing
+# AI_PROVIDER=gemini
+# AI_API_KEY=your_key
 ```
 
 ## Execution Modes
@@ -280,7 +393,13 @@ swiss-jobs search "Developer" --format csv
                 "workload_max": 100,
                 "is_permanent": true
             },
-            ...
+            "raw_data": {
+                "ai_processed": {
+                    "title_en": "Software Engineer",
+                    "title_de": "Softwareingenieur",
+                    "experience_level": "mid"
+                }
+            }
         }
     ],
     "total_count": 245,
@@ -289,41 +408,6 @@ swiss-jobs search "Developer" --format csv
     "source": "job_room",
     "search_time_ms": 342
 }
-```
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Optional proxy configuration
-SWISS_JOBS_PROXY_URL=socks5://user:pass@proxy:1080
-
-# Execution mode default
-SWISS_JOBS_MODE=stealth
-
-# Rate limiting
-SWISS_JOBS_REQUESTS_PER_MINUTE=30
-```
-
-### Proxy Configuration
-
-For high-volume scraping, use Swiss residential proxies:
-
-```python
-from swiss_jobs_scraper.core.session import ProxyPool, ExecutionMode
-from swiss_jobs_scraper.providers import JobRoomProvider
-
-proxy_pool = ProxyPool([
-    "socks5://user:pass@swiss-proxy-1:1080",
-    "socks5://user:pass@swiss-proxy-2:1080",
-])
-
-async with JobRoomProvider(
-    mode=ExecutionMode.AGGRESSIVE,
-    proxy_pool=proxy_pool
-) as provider:
-    result = await provider.search(request)
 ```
 
 ## API Documentation
@@ -395,6 +479,16 @@ swiss-jobs-scraper/
 │   │       ├── client.py   # Job-Room API client
 │   │       ├── mapper.py   # BFS code mapping
 │   │       └── constants.py
+│   ├── storage/            # Optional: Database integration
+│   │   ├── config.py       # Database settings
+│   │   ├── models.py       # SQLAlchemy ORM
+│   │   ├── connection.py   # Async connection pool
+│   │   └── repository.py   # CRUD operations
+│   ├── ai/                 # Optional: AI processing
+│   │   ├── config.py       # AI settings
+│   │   ├── processor.py    # Main orchestrator
+│   │   ├── prompts.py      # LLM prompts
+│   │   └── providers/      # Gemini, Groq implementations
 │   ├── cli/
 │   │   └── main.py         # Click-based CLI
 │   └── api/
@@ -403,6 +497,9 @@ swiss-jobs-scraper/
 │           ├── jobs.py     # Job endpoints
 │           └── health.py   # Health endpoints
 ├── tests/
+│   ├── unit/               # Unit tests (no network)
+│   ├── integration/        # Integration tests (mocked)
+│   └── e2e/                # End-to-end tests (live API)
 ├── pyproject.toml
 └── README.md
 ```
@@ -416,8 +513,17 @@ poetry install --with dev
 # Run tests
 pytest tests/ -v
 
+# Run unit tests only
+pytest tests/unit/ -v
+
+# Run with coverage
+pytest tests/ --cov=swiss_jobs_scraper --cov-report=html
+
 # Run linting
 ruff check src/
+
+# Run formatting
+black src/ tests/
 
 # Run type checking
 mypy src/

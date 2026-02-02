@@ -19,6 +19,19 @@ rich = "^13.7"
 tenacity = "^8.2"
 python-dotenv = "^1.0"
 
+# Optional: Database
+asyncpg = {version = "^0.30", optional = true}
+sqlalchemy = {version = "^2.0", extras = ["asyncio"], optional = true}
+
+# Optional: AI Providers
+google-generativeai = {version = "^0.8", optional = true}
+groq = {version = "^0.13", optional = true}
+
+[tool.poetry.extras]
+database = ["asyncpg", "sqlalchemy"]
+ai = ["google-generativeai", "groq"]
+all = ["asyncpg", "sqlalchemy", "google-generativeai", "groq"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
 pytest-asyncio = "^0.23"
