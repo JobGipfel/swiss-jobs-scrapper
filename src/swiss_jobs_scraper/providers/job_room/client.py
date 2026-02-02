@@ -119,7 +119,7 @@ class JobRoomProvider(BaseJobProvider):
         await self._init_session()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
     async def _init_session(self) -> None:
@@ -132,7 +132,7 @@ class JobRoomProvider(BaseJobProvider):
             )
             await self._session.start()
 
-        if not self._csrf_initialized:
+        if self._session and not self._csrf_initialized:
             await self._session.refresh_csrf_token(BASE_URL)
             self._csrf_initialized = True
 

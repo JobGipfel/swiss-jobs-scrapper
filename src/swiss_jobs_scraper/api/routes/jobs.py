@@ -2,7 +2,7 @@
 Job search and retrieval endpoints.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -211,7 +211,7 @@ class ErrorResponse(BaseModel):
 
 
 @router.get("/providers", response_model=ProvidersResponse)
-async def get_providers():
+async def get_providers() -> dict[str, list[dict[str, Any]]]:
     """
     List all available job providers.
 
@@ -258,7 +258,7 @@ async def search_jobs(
     provider: str = Query(default="job_room", description="Provider to use"),
     mode: str = Query(default="stealth", description="Execution mode"),
     include_raw: bool = Query(default=False, description="Include raw API data"),
-):
+) -> JobSearchResponse:
     """
     Search for jobs matching the given criteria.
 
@@ -342,7 +342,7 @@ async def quick_search(
     location: str | None = Query(default=None, description="Location"),
     page: int = Query(default=0, ge=0),
     page_size: int = Query(default=10, ge=1, le=50),
-):
+) -> JobSearchResponse:
     """
     Quick search endpoint with minimal parameters.
 
@@ -377,7 +377,7 @@ async def get_job_details(
     language: Literal["en", "de", "fr", "it"] = Query(default="en"),
     mode: str = Query(default="stealth", description="Execution mode"),
     include_raw: bool = Query(default=False, description="Include raw API data"),
-):
+) -> JobListing:
     """
     Get full details for a specific job.
 

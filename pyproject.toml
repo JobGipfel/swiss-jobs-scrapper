@@ -64,6 +64,7 @@ testpaths = ["tests"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
+plugins = ["pydantic.mypy"]
 
 [tool.black]
 line-length = 88

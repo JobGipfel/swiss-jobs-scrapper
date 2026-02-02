@@ -8,7 +8,7 @@ communal codes (Gemeindenummern) required by the job-room.ch API.
 import json
 import logging
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from swiss_jobs_scraper.core.exceptions import LocationNotFoundError
 
@@ -317,7 +317,7 @@ class BFSLocationMapper:
         """
         self._city_cache: dict[str, list[str]] = {}
         self._postal_cache: dict[str, list[str]] = {}
-        self._extended_data: dict | None = None
+        self._extended_data: dict[str, Any] | None = None
 
         # Load built-in data
         self._city_cache.update(MAJOR_CITIES_BFS)

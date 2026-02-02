@@ -217,7 +217,7 @@ class JobSearchRequest(BaseModel):
 
     @field_validator("workload_max")
     @classmethod
-    def validate_workload_range(cls, v: int, info) -> int:
+    def validate_workload_range(cls, v: int, info: Any) -> int:
         """Ensure workload_max >= workload_min."""
         if "workload_min" in info.data and v < info.data["workload_min"]:
             raise ValueError("workload_max must be >= workload_min")

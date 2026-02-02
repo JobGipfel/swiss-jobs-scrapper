@@ -2,6 +2,8 @@
 Health check endpoints.
 """
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from swiss_jobs_scraper.providers import get_provider, list_providers
@@ -10,7 +12,7 @@ router = APIRouter(tags=["Health"])
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """
     Check overall API health.
 
@@ -25,7 +27,7 @@ async def health_check():
 
 
 @router.get("/health/providers")
-async def providers_health():
+async def providers_health() -> dict[str, list[dict[str, Any]]]:
     """
     Check health of all job providers.
 

@@ -271,6 +271,9 @@ class ScraperSession:
         if not self.client:
             await self.start()
 
+        if self.client is None:
+            raise NetworkError("Session not started")
+
         try:
             response = await self.client.get(url)
             response.raise_for_status()
@@ -317,6 +320,9 @@ class ScraperSession:
         """
         if not self.client:
             await self.start()
+
+        if self.client is None:
+            raise NetworkError("Session not started")
 
         try:
             response = await self.client.get(url, params=params, **kwargs)
@@ -370,6 +376,9 @@ class ScraperSession:
         # Content-Type for JSON
         if json is not None:
             headers["Content-Type"] = "application/json;charset=UTF-8"
+
+        if self.client is None:
+            raise NetworkError("Session not started")
 
         try:
             response = await self.client.post(

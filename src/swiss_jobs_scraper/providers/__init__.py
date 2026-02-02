@@ -1,5 +1,6 @@
 """Providers package - all job data source implementations."""
 
+from swiss_jobs_scraper.core.provider import BaseJobProvider
 from swiss_jobs_scraper.providers.job_room import JobRoomProvider
 
 # Registry of all available providers
@@ -8,7 +9,7 @@ PROVIDERS = {
 }
 
 
-def get_provider(name: str):
+def get_provider(name: str) -> type[BaseJobProvider]:
     """
     Get a provider class by name.
 

@@ -110,7 +110,7 @@ app.include_router(jobs.router)
 
 
 @app.get("/", tags=["Root"])
-async def root():
+async def root() -> dict[str, str]:
     """API root - basic information."""
     return {
         "name": "Swiss Jobs Scraper API",

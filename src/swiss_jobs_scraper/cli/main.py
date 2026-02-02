@@ -201,7 +201,7 @@ def _format_table(data: Any, fields: list[str] | None = None) -> str:
     return ""
 
 
-def _extract_field(item: dict, field: str) -> str:
+def _extract_field(item: dict[str, Any], field: str) -> str:
     """Extract a field value from a nested dict."""
     if not isinstance(item, dict):
         return str(item)
@@ -234,6 +234,8 @@ def _extract_field(item: dict, field: str) -> str:
     if isinstance(value, dict):
         return json.dumps(value)
     return str(value) if value is not None else ""
+    # Add an explicit return match for static analysis if needed, though the above covers it
+    return ""
 
 
 # =============================================================================
@@ -254,6 +256,7 @@ def cli():
         swiss-jobs detail abc123-uuid --provider job_room
         swiss-jobs providers
         swiss-jobs serve --port 8000
+    """
     """
     pass
 
@@ -339,7 +342,7 @@ def search(
     mode: str,
     provider: str,
     raw: bool,
-):
+) -> None:
     """
     Search for jobs matching the given criteria.
 
@@ -417,7 +420,7 @@ def search(
     type=click.Choice(["fast", "stealth", "aggressive"]),
     default="stealth",
 )
-def detail(job_id: str, provider: str, lang: str, output_format: str, mode: str):
+def detail(job_id: str, provider: str, lang: str, output_format: str, mode: str) -> None:
     """
     Get full details for a specific job.
 
@@ -453,7 +456,7 @@ def detail(job_id: str, provider: str, lang: str, output_format: str, mode: str)
         click.echo(json.dumps(data, indent=2, ensure_ascii=False, default=str))
 
 
-def _print_job_detail(job):
+def _print_job_detail(job: Any) -> None:
     """Print job details in a nice format."""
     console.print(
         Panel(
@@ -491,7 +494,7 @@ def _print_job_detail(job):
 
 
 @cli.command("providers")
-def list_providers_cmd():
+def list_providers_cmd() -> None:
     """List all available job providers."""
     providers = list_providers()
 
@@ -513,7 +516,7 @@ def list_providers_cmd():
 
 @cli.command()
 @click.option("-p", "--provider", default=None, help="Specific provider to check")
-def health(provider: str | None):
+def health(provider: str | None) -> None:
     """Check health status of job providers."""
     providers_to_check = [provider] if provider else list_providers()
 
@@ -565,7 +568,7 @@ def health(provider: str | None):
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8000, type=int, help="Port to bind to")
 @click.option("--reload", is_flag=True, help="Enable auto-reload for development")
-def serve(host: str, port: int, reload: bool):
+def serve(host: str, port: int, reload: bool) -> None:
     """Start the REST API server."""
     try:
         import uvicorn
