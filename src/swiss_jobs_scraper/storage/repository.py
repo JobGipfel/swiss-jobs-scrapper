@@ -109,10 +109,10 @@ class JobRepository:
 
             if existing.content_hash != content_hash:
                 # Content changed - update
-                stmt = (
+                update_stmt = (
                     update(StoredJob).where(StoredJob.id == job.id).values(**job_data)
                 )
-                await session.execute(stmt)
+                await session.execute(update_stmt)
                 logger.debug(f"Updated job: {job.id}")
                 return (False, True)
 
@@ -162,7 +162,7 @@ class JobRepository:
             result = await session.execute(
                 select(StoredJob).where(StoredJob.id == job_id)
             )
-            return result.scalar_one_or_none()  # type: ignore
+            return result.scalar_one_or_none()
 
     async def get_unprocessed_jobs(self, limit: int = 100) -> list[StoredJob]:
         """

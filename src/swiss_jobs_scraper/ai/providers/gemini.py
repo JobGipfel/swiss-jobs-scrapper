@@ -39,8 +39,8 @@ class GeminiProvider(AIProvider):
             try:
                 import google.generativeai as genai
 
-                genai.configure(api_key=self.api_key)
-                self._client = genai.GenerativeModel(
+                genai.configure(api_key=self.api_key)  # type: ignore
+                self._client = genai.GenerativeModel(  # type: ignore
                     self.model,
                     generation_config={
                         "response_mime_type": "application/json",
