@@ -22,7 +22,7 @@ RUN curl -sSL https://install.python-poetry.org | python3 - \
     && ln -s /opt/poetry/bin/poetry /usr/local/bin/poetry
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 
 # Export dependencies to requirements.txt
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
@@ -108,7 +108,7 @@ RUN curl -sSL https://install.python-poetry.org | python3 - \
     && ln -s /opt/poetry/bin/poetry /usr/local/bin/poetry
 
 # Copy dependency files and install
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi
 
