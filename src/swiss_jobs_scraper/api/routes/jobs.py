@@ -163,7 +163,7 @@ class APISearchRequest(BaseModel):
         radius_search = None
         if self.radius_lat is not None and self.radius_lon is not None:
             radius_search = RadiusSearchRequest(
-                geoPoint=GeoPoint(lat=self.radius_lat, lon=self.radius_lon),
+                geo_point=GeoPoint(lat=self.radius_lat, lon=self.radius_lon),
                 distance=self.radius_km,
             )
 
