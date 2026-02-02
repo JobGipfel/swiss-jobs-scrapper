@@ -8,6 +8,7 @@ to ensure consistent behavior across the scraper system.
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +35,7 @@ class ProviderHealth(BaseModel):
     latency_ms: int | None = None
     last_check: datetime = Field(default_factory=datetime.now)
     message: str | None = None
-    details: dict | None = None
+    details: dict[str, Any] | None = None
 
 
 class ProviderCapabilities(BaseModel):
@@ -58,6 +59,8 @@ class BaseJobProvider(ABC):
     Each provider (job-room.ch, LinkedIn, Indeed, etc.) implements this interface
     to provide a consistent API for job searching and retrieval.
 
+
+
     Usage:
         class JobRoomProvider(BaseJobProvider):
             name = "job_room"
@@ -65,6 +68,17 @@ class BaseJobProvider(ABC):
             async def search(self, request: JobSearchRequest) -> JobSearchResponse:
                 # Implementation...
     """
+
+    def __init__(self, mode: Any = "stealth", include_raw_data: bool = False):
+        """
+        Initialize the provider.
+
+        Args:
+            mode: Scraper execution mode (fast, stealth, aggressive)
+            include_raw_data: Whether to include original API response in results
+        """
+        self.mode = mode
+        self.include_raw_data = include_raw_data
 
     @property
     @abstractmethod
@@ -140,7 +154,7 @@ class BaseJobProvider(ABC):
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit - cleanup resources."""
         await self.close()
 

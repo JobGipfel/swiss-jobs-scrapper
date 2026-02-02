@@ -17,8 +17,10 @@ from swiss_jobs_scraper.api.routes import health, jobs
 # =============================================================================
 
 
+from typing import AsyncGenerator
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup/shutdown lifecycle."""
     # Startup
     yield

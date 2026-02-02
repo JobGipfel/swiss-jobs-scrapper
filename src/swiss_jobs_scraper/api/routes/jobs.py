@@ -163,7 +163,7 @@ class APISearchRequest(BaseModel):
         radius_search = None
         if self.radius_lat is not None and self.radius_lon is not None:
             radius_search = RadiusSearchRequest(
-                geo_point=GeoPoint(lat=self.radius_lat, lon=self.radius_lon),
+                geoPoint=GeoPoint(lat=self.radius_lat, lon=self.radius_lon),
                 distance=self.radius_km,
             )
 
@@ -194,7 +194,7 @@ class APISearchRequest(BaseModel):
 class ProvidersResponse(BaseModel):
     """Response listing available providers."""
 
-    providers: list[dict]
+    providers: list[dict[str, Any]]
 
 
 class ErrorResponse(BaseModel):

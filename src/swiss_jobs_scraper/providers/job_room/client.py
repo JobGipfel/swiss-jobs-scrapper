@@ -11,7 +11,7 @@ Production-grade client for job-room.ch with:
 import logging
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from swiss_jobs_scraper.core.exceptions import (
     ProviderError,
@@ -177,6 +177,8 @@ class JobRoomProvider(BaseJobProvider):
         payload = self._build_search_payload(request)
 
         # Build URL with query parameters
+        await self._init_session()
+        assert self._session is not None
         url = self._build_search_url(request)
 
         try:
@@ -197,7 +199,7 @@ class JobRoomProvider(BaseJobProvider):
                 total_count = len(jobs)
             elif isinstance(data, dict):
                 # Paginated response
-                jobs = data.get("content", data.get("jobAdvertisements", []))
+                jobs = cast(list[Any], data.get("content", data.get("jobAdvertisements", [])))
                 total_count = data.get("totalElements", len(jobs))
             else:
                 raise ResponseParseError(
@@ -342,6 +344,7 @@ class JobRoomProvider(BaseJobProvider):
             Complete JobListing with all details
         """
         await self._init_session()
+        assert self._session is not None
 
         lang_param = LANGUAGE_PARAMS.get(language, "ZW4=")
         url = f"{API_BASE}/{job_id}?_ng={lang_param}"
@@ -370,6 +373,7 @@ class JobRoomProvider(BaseJobProvider):
 
         try:
             await self._init_session()
+            assert self._session is not None
 
             # Try a minimal search
             response = await self._session.get(BASE_URL)

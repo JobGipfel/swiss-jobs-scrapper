@@ -17,7 +17,7 @@ import json
 import sys
 from enum import Enum
 from io import StringIO
-from typing import Any
+from typing import Any, cast, Literal
 
 import click
 from rich.console import Console
@@ -28,7 +28,9 @@ from rich.table import Table
 from swiss_jobs_scraper import __version__
 from swiss_jobs_scraper.core.models import (
     ContractType,
+    JobListing,
     JobSearchRequest,
+    JobSearchResponse,
     SortOrder,
     WorkForm,
 )
@@ -227,7 +229,7 @@ def _extract_field(item: dict[str, Any], field: str) -> str:
         return item.get("created_at", "")[:10] if item.get("created_at") else ""
 
     elif field == "created_at":
-        return item.get("created_at", "")
+        return str(item.get("created_at", ""))
 
     # Direct field access
     value = item.get(field, "")
@@ -245,7 +247,7 @@ def _extract_field(item: dict[str, Any], field: str) -> str:
 
 @click.group()
 @click.version_option(__version__, prog_name="swiss-jobs")
-def cli():
+def cli() -> None:
     """
     Swiss Jobs Scraper - Search Swiss job listings from multiple sources.
 
@@ -369,13 +371,13 @@ def search(
         page=page,
         page_size=page_size,
         sort=SortOrder(sort),
-        language=lang,
+        language=cast(Literal["en", "de", "fr", "it"], lang),
     )
 
     # Get execution mode
     exec_mode = ExecutionMode(mode)
 
-    async def _search():
+    async def _search() -> JobSearchResponse:
         provider_cls = get_provider(provider)
         async with provider_cls(mode=exec_mode, include_raw_data=raw) as p:
             return await p.search(request)
@@ -432,10 +434,10 @@ def detail(
     """
     exec_mode = ExecutionMode(mode)
 
-    async def _get_detail():
+    async def _get_detail() -> JobListing:
         provider_cls = get_provider(provider)
         async with provider_cls(mode=exec_mode, include_raw_data=True) as p:
-            return await p.get_details(job_id, language=lang)
+            return await p.get_details(job_id, language=cast(Literal["en", "de", "fr", "it"], lang))
 
     with Progress(
         SpinnerColumn(),
@@ -522,7 +524,7 @@ def health(provider: str | None) -> None:
     """Check health status of job providers."""
     providers_to_check = [provider] if provider else list_providers()
 
-    async def _check_health():
+    async def _check_health() -> list[Any]: # using Any because ProviderHealth might not be imported or circular
         results = []
         for name in providers_to_check:
             provider_cls = get_provider(name)
