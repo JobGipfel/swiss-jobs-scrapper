@@ -414,7 +414,13 @@ async def quick_search(
     )
 
     return await search_jobs(
-        request, provider="job_room", mode="stealth", include_raw=False
+        request,
+        provider="job_room",
+        mode="stealth",
+        include_raw=False,
+        persist=False,
+        ai_process=False,
+        features=None,
     )
 
 
