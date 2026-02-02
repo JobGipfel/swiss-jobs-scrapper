@@ -29,7 +29,6 @@ from swiss_jobs_scraper import __version__
 from swiss_jobs_scraper.core.models import (
     ContractType,
     JobSearchRequest,
-    JobSearchResponse,
     SortOrder,
     WorkForm,
 )
@@ -473,7 +472,7 @@ def _print_job_detail(job):
 
     # Employment details
     emp = job.employment
-    console.print(f"[bold]Employment:[/bold]")
+    console.print("[bold]Employment:[/bold]")
     console.print(f"  • Workload: {emp.workload_min}-{emp.workload_max}%")
     console.print(f"  • Permanent: {'Yes' if emp.is_permanent else 'No'}")
     if emp.start_date:
@@ -481,7 +480,7 @@ def _print_job_detail(job):
 
     # Application
     if job.application:
-        console.print(f"\n[bold]How to Apply:[/bold]")
+        console.print("\n[bold]How to Apply:[/bold]")
         if job.application.email:
             console.print(f"  • Email: {job.application.email}")
         if job.application.form_url:

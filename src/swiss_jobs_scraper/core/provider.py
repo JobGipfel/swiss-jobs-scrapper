@@ -150,4 +150,4 @@ class BaseJobProvider(ABC):
 
         Override in subclass if cleanup is needed.
         """
-        pass
+        return

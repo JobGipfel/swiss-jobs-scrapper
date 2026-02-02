@@ -40,7 +40,7 @@ A production-grade API for accessing Swiss job market data.
 ## Features
 
 - **Multiple Providers**: Currently supports job-room.ch, extensible to other sources
-- **Full Filter Support**: All available filters including location, workload, contract type, language skills
+- **Full Filter Support**: All filters including location, workload, contract type
 - **Swiss-Optimized**: BFS communal code resolution, canton filtering, multilingual support
 - **Flexible Execution Modes**: Fast, Stealth, or Aggressive modes for different use cases
 

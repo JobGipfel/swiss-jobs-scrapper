@@ -5,7 +5,6 @@ Implements browser fingerprint simulation, CSRF handling, and proxy rotation
 for evading WAF detection on target job portals.
 """
 
-import asyncio
 import logging
 import random
 from enum import Enum
@@ -61,14 +60,19 @@ class ExecutionMode(str, Enum):
 
 
 # Chrome on Windows - the most common pattern
+# fmt: off
 USER_AGENTS = [
     # Chrome 124
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     # Chrome 123
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
     # Chrome 122
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 ]
+# fmt: on
 
 
 def get_chrome_headers(version: str = "124") -> dict[str, str]:
@@ -77,14 +81,22 @@ def get_chrome_headers(version: str = "124") -> dict[str, str]:
 
     This includes Client Hints which are validated by modern WAFs.
     """
+    user_agent = (
+        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        f"(KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36"
+    )
+    sec_ch_ua = (
+        f'"Chromium";v="{version}", "Google Chrome";v="{version}", '
+        '"Not-A.Brand";v="99"'
+    )
     return {
-        "User-Agent": f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
+        "User-Agent": user_agent,
         "Accept": "application/json, text/plain, */*",
         "Accept-Language": "en-US,en;q=0.9,de;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
         "Connection": "keep-alive",
         # Client Hints - Critical for Chrome impersonation
-        "sec-ch-ua": f'"Chromium";v="{version}", "Google Chrome";v="{version}", "Not-A.Brand";v="99"',
+        "sec-ch-ua": sec_ch_ua,
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
         # Fetch metadata headers
@@ -275,7 +287,7 @@ class ScraperSession:
 
         except httpx.RequestError as e:
             logger.error(f"Failed to refresh CSRF token: {e}")
-            raise NetworkError(f"CSRF token refresh failed: {e}")
+            raise NetworkError(f"CSRF token refresh failed: {e}") from e
 
     @retry(
         retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
@@ -312,7 +324,7 @@ class ScraperSession:
             return response
 
         except httpx.RequestError as e:
-            raise NetworkError(f"GET request failed: {e}")
+            raise NetworkError(f"GET request failed: {e}") from e
 
     @retry(
         retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
@@ -367,7 +379,7 @@ class ScraperSession:
             return response
 
         except httpx.RequestError as e:
-            raise NetworkError(f"POST request failed: {e}")
+            raise NetworkError(f"POST request failed: {e}") from e
 
     def _handle_response_errors(self, response: httpx.Response) -> None:
         """Handle common HTTP error responses."""

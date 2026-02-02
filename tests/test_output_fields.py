@@ -69,7 +69,7 @@ async def test_output_fields():
         print(f"✓ Raw Data Present: {job.raw_data is not None}")
 
         if job.raw_data:
-            print(f"\n📦 Raw Data Sample (first 500 chars):")
+            print("\n📦 Raw Data Sample (first 500 chars):")
             raw_str = json.dumps(job.raw_data, indent=2, default=str)
             print(raw_str[:500] + "..." if len(raw_str) > 500 else raw_str)
 

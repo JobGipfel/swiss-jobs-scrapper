@@ -18,7 +18,6 @@ from swiss_jobs_scraper.core.models import (
     JobListing,
     JobSearchRequest,
     JobSearchResponse,
-    LanguageLevel,
     LanguageSkillFilter,
     RadiusSearchRequest,
     SortOrder,
@@ -302,7 +301,7 @@ async def search_jobs(
         try:
             provider_cls = get_provider(provider)
         except KeyError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
         # Validate mode
         try:
@@ -310,8 +309,8 @@ async def search_jobs(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid mode. Choose from: fast, stealth, aggressive",
-            )
+                detail="Invalid mode. Choose from: fast, stealth, aggressive",
+            ) from None
 
         # Convert to internal request
         search_request = request.to_search_request()
@@ -326,15 +325,15 @@ async def search_jobs(
         raise HTTPException(
             status_code=400,
             detail=f"Location not found: {e.location}",
-        )
+        ) from e
     except RateLimitError as e:
         raise HTTPException(
             status_code=429,
             detail=str(e),
             headers={"Retry-After": str(e.retry_after or 60)},
-        )
+        ) from e
     except ProviderError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/search/quick")
@@ -395,15 +394,15 @@ async def get_job_details(
     try:
         provider_cls = get_provider(provider)
     except KeyError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         exec_mode = ExecutionMode(mode)
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid mode",
-        )
+            detail="Invalid mode",
+        ) from None
 
     try:
         async with provider_cls(mode=exec_mode, include_raw_data=include_raw) as p:
@@ -413,5 +412,7 @@ async def get_job_details(
 
     except ProviderError as e:
         if "not found" in str(e).lower():
-            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-        raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=404, detail=f"Job not found: {job_id}"
+            ) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e

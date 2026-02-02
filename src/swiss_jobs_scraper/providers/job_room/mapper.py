@@ -111,7 +111,6 @@ MAJOR_CITIES_BFS = {
     "aarau": ["4001"],
     "baden": ["4021"],
     "wettingen": ["4045"],
-    "olten": ["2581"],
     "zofingen": ["4289"],
     "brugg": ["4095"],
     "lenzburg": ["4201"],
@@ -331,7 +330,7 @@ class BFSLocationMapper:
     def _load_extended_data(self, path: Path) -> None:
         """Load extended BFS data from JSON file."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Merge with existing caches

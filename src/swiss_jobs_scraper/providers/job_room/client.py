@@ -222,7 +222,7 @@ class JobRoomProvider(BaseJobProvider):
 
         except Exception as e:
             logger.error(f"Search failed: {e}")
-            raise ProviderError(self.name, f"Search failed: {e}")
+            raise ProviderError(self.name, f"Search failed: {e}") from e
 
     def _build_search_payload(self, request: JobSearchRequest) -> dict[str, Any]:
         """
@@ -261,7 +261,7 @@ class JobRoomProvider(BaseJobProvider):
             }
 
         # Build work forms array
-        work_forms = [wf.value for wf in request.work_forms]
+        [wf.value for wf in request.work_forms]
 
         # Build language skills filter
         language_skills = []
@@ -358,7 +358,7 @@ class JobRoomProvider(BaseJobProvider):
 
         except Exception as e:
             logger.error(f"Failed to get job details: {e}")
-            raise ProviderError(self.name, f"Failed to get job details: {e}")
+            raise ProviderError(self.name, f"Failed to get job details: {e}") from e
 
     # =========================================================================
     # Health Check

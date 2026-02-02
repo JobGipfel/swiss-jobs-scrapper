@@ -5,7 +5,6 @@ These tests perform actual API calls to job-room.ch to verify the scraper works 
 """
 
 import asyncio
-import json
 import sys
 
 # Add src to path
@@ -44,7 +43,7 @@ async def test_basic_search():
 
     if result.items:
         job = result.items[0]
-        print(f"\nFirst result:")
+        print("\nFirst result:")
         print(f"  Title: {job.title}")
         print(f"  Company: {job.company.name}")
         print(f"  Location: {job.location.city}, {job.location.canton_code}")
@@ -231,7 +230,7 @@ async def test_get_job_details(job_id: str):
     ) as provider:
         job = await provider.get_details(job_id, language="en")
 
-    print(f"\n✓ Successfully retrieved job details")
+    print("\n✓ Successfully retrieved job details")
     print(f"\n{'='*40}")
     print(f"Title: {job.title}")
     print(f"Company: {job.company.name}")
@@ -246,7 +245,7 @@ async def test_get_job_details(job_id: str):
                 desc = desc[:300] + "..."
             print(f"\nDescription:\n{desc}")
 
-    print(f"\n✓ All fields successfully parsed")
+    print("\n✓ All fields successfully parsed")
     return True
 
 
