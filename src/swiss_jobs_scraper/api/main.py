@@ -5,6 +5,7 @@ Provides REST API endpoints for job searching and retrieval.
 """
 
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,9 +16,6 @@ from swiss_jobs_scraper.api.routes import health, jobs
 # =============================================================================
 # Application Lifecycle
 # =============================================================================
-
-
-from typing import AsyncGenerator
 
 
 @asynccontextmanager

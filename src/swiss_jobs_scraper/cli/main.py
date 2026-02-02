@@ -17,7 +17,7 @@ import json
 import sys
 from enum import Enum
 from io import StringIO
-from typing import Any, cast, Literal
+from typing import Any, Literal, cast
 
 import click
 from rich.console import Console
