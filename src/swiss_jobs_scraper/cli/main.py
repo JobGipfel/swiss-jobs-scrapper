@@ -257,7 +257,7 @@ def cli():
         swiss-jobs providers
         swiss-jobs serve --port 8000
     """
-    """
+
     pass
 
 
@@ -420,7 +420,9 @@ def search(
     type=click.Choice(["fast", "stealth", "aggressive"]),
     default="stealth",
 )
-def detail(job_id: str, provider: str, lang: str, output_format: str, mode: str) -> None:
+def detail(
+    job_id: str, provider: str, lang: str, output_format: str, mode: str
+) -> None:
     """
     Get full details for a specific job.
 

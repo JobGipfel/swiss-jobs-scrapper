@@ -15,7 +15,9 @@ class ScraperError(Exception):
 class ProviderError(ScraperError):
     """Error originating from a specific provider."""
 
-    def __init__(self, provider: str, message: str, details: dict[str, Any] | None = None):
+    def __init__(
+        self, provider: str, message: str, details: dict[str, Any] | None = None
+    ):
         super().__init__(f"[{provider}] {message}", details)
         self.provider = provider
 
