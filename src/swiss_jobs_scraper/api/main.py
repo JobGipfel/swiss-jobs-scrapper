@@ -4,8 +4,8 @@ FastAPI application for Swiss Jobs Scraper.
 Provides REST API endpoints for job searching and retrieval.
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
