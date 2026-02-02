@@ -4,7 +4,7 @@ Google Gemini AI provider implementation.
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from swiss_jobs_scraper.ai.providers.base import AIProvider
 
@@ -81,7 +81,7 @@ class GeminiProvider(AIProvider):
             logger.debug(f"Gemini response: {text[:200]}...")
 
             # Parse JSON from response
-            return json.loads(text)
+            return cast(dict[str, Any], json.loads(text))
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")

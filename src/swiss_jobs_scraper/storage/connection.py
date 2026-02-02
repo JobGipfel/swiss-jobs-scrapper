@@ -8,7 +8,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import (  # type: ignore
+from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
@@ -98,7 +98,7 @@ class DatabaseConnection:
         Safe to call multiple times.
         """
         if self._engine:
-            await self._engine.dispose()  # type: ignore
+            await self._engine.dispose()
             self._engine = None
             self._session_factory = None
             self._connected = False

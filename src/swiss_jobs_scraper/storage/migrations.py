@@ -69,6 +69,6 @@ async def run_migrations(engine: AsyncEngine) -> None:
     Args:
         engine: SQLAlchemy async engine
     """
-    async with engine.begin() as conn:  # type: ignore
+    async with engine.begin() as conn:
         for migration in MIGRATIONS:
             await conn.execute(text(migration))

@@ -4,7 +4,7 @@ Groq AI provider implementation.
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from swiss_jobs_scraper.ai.providers.base import AIProvider
 
@@ -78,7 +78,7 @@ class GroqProvider(AIProvider):
             logger.debug(f"Groq response: {content[:200]}...")
 
             # Parse JSON
-            return json.loads(content)
+            return cast(dict[str, Any], json.loads(content))
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Groq response as JSON: {e}")

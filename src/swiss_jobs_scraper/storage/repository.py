@@ -182,10 +182,10 @@ class JobRepository:
             result = await session.execute(
                 select(StoredJob)
                 .where(
-                    (StoredJob.ai_processed_at.is_(None))  # type: ignore
-                    | (StoredJob.date_updated > StoredJob.ai_processed_at)  # type: ignore
+                    (StoredJob.ai_processed_at.is_(None))
+                    | (StoredJob.date_updated > StoredJob.ai_processed_at)
                 )
-                .order_by(StoredJob.date_added.desc())  # type: ignore
+                .order_by(StoredJob.date_added.desc())
                 .limit(limit)
             )
             return list(result.scalars().all())
@@ -255,8 +255,8 @@ class JobRepository:
 
             result = await session.execute(
                 select(func.count(StoredJob.id)).where(
-                    (StoredJob.ai_processed_at.is_(None))  # type: ignore
-                    | (StoredJob.date_updated > StoredJob.ai_processed_at)  # type: ignore
+                    (StoredJob.ai_processed_at.is_(None))
+                    | (StoredJob.date_updated > StoredJob.ai_processed_at)
                 )
             )
             return result.scalar() or 0
