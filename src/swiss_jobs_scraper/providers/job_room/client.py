@@ -199,7 +199,9 @@ class JobRoomProvider(BaseJobProvider):
                 total_count = len(jobs)
             elif isinstance(data, dict):
                 # Paginated response
-                jobs = cast(list[Any], data.get("content", data.get("jobAdvertisements", [])))
+                jobs = cast(
+                    list[Any], data.get("content", data.get("jobAdvertisements", []))
+                )
                 total_count = data.get("totalElements", len(jobs))
             else:
                 raise ResponseParseError(

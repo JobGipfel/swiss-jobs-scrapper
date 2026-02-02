@@ -437,7 +437,9 @@ def detail(
     async def _get_detail() -> JobListing:
         provider_cls = get_provider(provider)
         async with provider_cls(mode=exec_mode, include_raw_data=True) as p:
-            return await p.get_details(job_id, language=cast(Literal["en", "de", "fr", "it"], lang))
+            return await p.get_details(
+                job_id, language=cast(Literal["en", "de", "fr", "it"], lang)
+            )
 
     with Progress(
         SpinnerColumn(),
@@ -524,7 +526,9 @@ def health(provider: str | None) -> None:
     """Check health status of job providers."""
     providers_to_check = [provider] if provider else list_providers()
 
-    async def _check_health() -> list[Any]: # using Any because ProviderHealth might not be imported or circular
+    async def _check_health() -> (
+        list[Any]
+    ):  # using Any because ProviderHealth might not be imported or circular
         results = []
         for name in providers_to_check:
             provider_cls = get_provider(name)
