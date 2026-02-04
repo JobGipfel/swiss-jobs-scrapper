@@ -1,170 +1,159 @@
-# Swiss Jobs Scraper - System Reference Manual
+# System Reference Manual - Swiss Jobs Scraper 🇨🇭
 
-> **Version**: 2.0.0 (AI/Machine Optimized)
-> **Target Audience**: Developers, AI Agents, System Architects
+> **Version**: 2.0.0
+> **Target Audience**: Developers, System Architects, AI Agents
 > **Purpose**: Definitive source of truth for schema, API, and internal logic.
 
-This document describes the Swiss Jobs Scraper system. It is structured to be parsed by LLMs or developers needing exact specifications.
+This document describes the Swiss Jobs Scraper system. It is structured to be parsed by LLMs or developers requiring exact specifications.
 
 ---
 
-## 1. System Overview
+## 1. System Architecture
 
-The system is an asynchronous job aggregation platform with 4 layers:
+The system follows a **4-Layer Architecture** designed for resilience and separation of concerns:
 
-1.  **Ingestion Layer (Providers)**: Fetches raw data from external sources (currently `job_room`).
-2.  **Processing Layer (Core)**: Normalizes data, simulates browser fingerprints (Stealth), and handles IO.
-3.  **Enrichment Layer (AI)**: Uses LLMs (Gemini/Groq) to translate and extract structured data (Experience, Keywords).
-4.  **Persistence Layer (Storage)**: Stores data in PostgreSQL with deduplication logic.
+1.  **Ingestion Layer (Providers)**
+    *   Fetches raw data from external sources (currently `job_room`).
+    *   Handles platform-specific pagination and payload mapping.
+2.  **Processing Layer (Core)**
+    *   Normalizes data into a unified `Job` model.
+    *   **Stealth Engine**: Simulates browser fingerprints (Chrome 120+), Client Hints, and handles complex CSRF tokens for SPA backends.
+    *   **BFS Resolver**: Maps city names ("Zürich") to BFS Communal Codes ("261") for accurate Swiss geo-filtering.
+3.  **Enrichment Layer (AI)**
+    *   Uses LLMs (Gemini/Groq) to enrich raw data.
+    *   **Atomic Features**: Translation, Experience Extraction, Keyword Generation.
+4.  **Persistence Layer (Storage)**
+    *   PostgreSQL with SQLAlchemy.
+    *   Handles deduplication via content hashing and tracks update history.
 
 ---
 
-## 2. Database Schema
+## 2. Configuration (`.env`)
 
-**Table**: `jobs` (SQLAlchemy: `StoredJob`)
-**Primary Key**: `id`
+Configure the application via environment variables.
+
+### Core Settings
+| Variable | Default | Description |
+|---|---|---|
+| `APP_ENV` | `production` | Environment: `production` or `development`. |
+| `LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG` for tracing requests). |
+| `API_PORT` | `8000` | Port for the FastAPI server. |
+| `WORKERS` | `4` | Number of Uvicorn workers. |
+
+### Database (Optional)
+Required only if persistence is enabled.
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Full connection string: `postgresql+asyncpg://user:pass@host:5432/db` |
+
+### AI Integration (Optional)
+Required for enrichment features.
+| Variable | Default | Description |
+|---|---|---|
+| `AI_PROVIDER` | `gemini` | Provider: `gemini` or `groq`. |
+| `AI_API_KEY` | - | **Required**. Your API Secret Key. |
+| `AI_MODEL` | `gemini-1.5-flash` | Specific model identifier. |
+
+---
+
+## 3. Database Schema
+
+**Table**: `jobs`
+**ORM**: SQLAlchemy `StoredJob`
 
 | Column | Type | Nullable | Description |
-|--------|------|----------|-------------|
-| `id` | `VARCHAR(255)` | NO | Unique Job UUID from provider. |
-| `source_platform` | `VARCHAR(100)` | NO | Origin (e.g., `job_room`). |
-| `title` | `VARCHAR(500)` | NO | Original job title. |
+|---|---|---|---|
+| `id` | `VARCHAR` | NO | Unique Job UUID from provider. **PK**. |
+| `source_platform` | `VARCHAR` | NO | Origin (e.g., `job_room`). |
+| `title` | `VARCHAR` | NO | Original job title. |
 | `description` | `TEXT` | YES | Full HTML/Text description. |
-| `job_link` | `VARCHAR(1000)` | YES | URL to job posting. |
-| `external_link` | `VARCHAR(1000)` | YES | URL to application form. |
-| `email` | `VARCHAR(255)` | YES | Contact email. |
-| `date_added` | `TIMESTAMP` | NO | UTC timestamp of insertion. |
-| `date_updated` | `TIMESTAMP` | YES | UTC timestamp of last content change. |
-| `content_hash` | `VARCHAR(64)` | YES | SHA256 of `title + description + company`. |
-| `raw_data` | `JSONB` | YES | Full original payload from provider. |
+| `job_link` | `VARCHAR` | YES | Direct link to posting. |
+| `email` | `VARCHAR` | YES | Contact email if found. |
+| `date_added` | `TIMESTAMP` | NO | UTC insertion time. |
+| `date_updated` | `TIMESTAMP` | YES | UTC time of last content change. |
+| `content_hash` | `VARCHAR` | YES | SHA256(`title`+`desc`+`company`) for change detection. |
 
 ### AI Enrichment Columns
-These fields are populated only after AI processing runs.
+Populated asynchronously after ingestion.
 
 | Column | Type | Description |
-|--------|------|-------------|
-| `title_en` | `VARCHAR(500)` | English translation. |
-| `title_de` | `VARCHAR(500)` | German translation. |
-| `title_fr` | `VARCHAR(500)` | French translation. |
-| `title_it` | `VARCHAR(500)` | Italian translation. |
-| `description_en` | `TEXT` | English description. |
-| `description_de` | `TEXT` | German description. |
-| `description_fr` | `TEXT` | French description. |
-| `description_it` | `TEXT` | Italian description. |
-| `required_languages` | `ARRAY(VARCHAR)` | List of ISO codes (e.g., `['en', 'de']`). |
-| `experience_level` | `VARCHAR(50)` | Enum: `entry`, `junior`, `mid`, `senior`, `lead`. |
-| `years_experience_min`| `INTEGER` | Min years required. |
-| `years_experience_max`| `INTEGER` | Max years required. |
-| `education` | `VARCHAR(500)` | Required degree/diploma. |
-| `semantic_keywords` | `ARRAY(VARCHAR)` | Generated search tags. |
-| `ai_processed_at` | `TIMESTAMP` | When AI last ran. |
+|---|---|---|
+| `title_en/de/fr/it` | `VARCHAR` | Translated titles. |
+| `description_en/...` | `TEXT` | Translated descriptions. |
+| `required_languages` | `ARRAY` | ISO codes (e.g., `['en', 'de']`). |
+| `experience_level` | `VARCHAR` | `entry`, `junior`, `mid`, `senior`, `lead`. |
+| `semantic_keywords` | `ARRAY` | Generated tags for vector search/indexing. |
 
 ---
 
-## 3. API Reference
+## 4. API Reference
 
 **Base URL**: `http://localhost:8000`
-**Docs**: `/docs` (Swagger UI)
+**Interactive Docs**: `/docs` (Swagger UI)
 
-### 3.1 Endpoints
-
-#### `GET /jobs/providers`
-Returns list of available providers and their capabilities.
+### Endpoints
 
 #### `POST /jobs/search`
-Main search endpoint.
+Execute a live search against external providers.
 
-**Query Parameters**:
-*   `provider` (str, default=`job_room`): Data source.
-*   `mode` (str, default=`stealth`): `fast`, `stealth`, `aggressive`.
-*   `persist` (bool, default=`false`): Save to DB.
-*   `ai_process` (bool, default=`false`): Run AI enrichment.
-*   `features` (str, optional): CSV of features (e.g., `translation,keywords`).
-
-**Request Body (JSON)**:
+**Body**:
 ```json
 {
-  "query": "string | null",
-  "location": "string | null",
-  "canton_codes": ["string"],
-  "workload_min": "integer (0-100)",
-  "workload_max": "integer (0-100)",
-  "contract_type": "permanent | temporary | any",
-  "posted_within_days": "integer",
-  "page": "integer (0+)",
-  "page_size": "integer (1-100)",
-  "language": "en | de | fr | it"
+  "query": "Frontend Developer",
+  "location": "Bern",
+  "canton_codes": ["BE", "SO"],
+  "workload_min": 80,
+  "contract_type": "permanent",
+  "language": "en"
 }
 ```
 
 #### `GET /jobs/search/quick`
-Simplified GET search.
-**Params**: `query` (required), `location`, `page`.
-
-#### `GET /jobs/{provider}/{job_id}`
-Fetch single job details.
-**Params**: `language` (default=`en`).
+Simplified GET search for minimal use cases.
+`GET /jobs/search/quick?query=Python&location=Zurich`
 
 #### `POST /jobs/process`
-Batch process stored jobs with AI.
+Trigger batch AI processing for jobs already in the database.
 **Params**: `limit` (max 1000).
 
-#### `GET /jobs/stats`
-Returns DB statistics (`total_jobs`, `unprocessed_jobs`).
+---
+
+## 5. CLI Reference
+
+The system provides a robust CLI via `swiss-jobs`.
+
+### Commands
+
+| Command | Usage | Description |
+|---|---|---|
+| `search` | `swiss-jobs search "Query" [flags]` | Main search interface. |
+| `serve` | `swiss-jobs serve --port 8000` | Start the API server. |
+| `process`| `swiss-jobs process --limit 50` | Run AI enrichment on DB records. |
+| `health` | `swiss-jobs health` | Check provider connectivity. |
+
+### Search Flags
+
+| Flag | Category | Description |
+|---|---|---|
+| `-l` `--location` | Filter | City, Zip, or Canton name. |
+| `-c` `--canton` | Filter | Specific Canton Code (e.g. `ZH`). |
+| `--workload-min` | Filter | Minimum percentage (0-100). |
+| `--save` | Action | Persist results to database. |
+| `--ai` | Action | Run AI enrichment immediately. |
+| `--mode` | System | `fast` (no delay), `stealth` (fingerprinted), `aggressive` (proxied).. |
 
 ---
 
-## 4. CLI Reference
+## 6. Technical Specifications
 
-**Command**: `swiss-jobs`
+### Stealth & Anti-Bot
+The scraper is designed to mimic a legitimate user:
+1.  **TLS Fingerprinting**: Uses HTTP/2 to match browser signatures.
+2.  **Client Hints**: Injects `sec-ch-ua` headers corresponding to Chrome 120+.
+3.  **CSRF Handling**: For `job_room` (Angular app), the scraper autonomously performs the handshake to acquire the `XSRF-TOKEN` cookie and replays it in the `X-XSRF-TOKEN` header.
 
-### 4.1 Commands
-
-| Command | Arguments | Options | Description |
-|---------|-----------|---------|-------------|
-| `search` | `[QUERY]` | see below | Search external providers. |
-| `detail` | `<JOB_ID>` | `--provider`, `--format` | Get full job JSON. |
-| `process` | none | `--limit` | AI-enrich existing DB records. |
-| `serve` | none | `--port`, `--host` | Start API server. |
-| `health` | none | `--provider` | Check external connectivity. |
-
-### 4.2 Search Options (`swiss-jobs search`)
-
-*   **Filters**:
-    *   `--location, -l`: City/Canton/Zip.
-    *   `--canton, -c`: Canton Code.
-    *   `--workload-min`: Int (0-100).
-    *   `--contract`: `permanent`, `temporary`.
-    *   `--days`: Posted in last N days.
-*   **Actions**:
-    *   `--save`: Write to DB.
-    *   `--ai`: Run AI.
-*   **System**:
-    *   `--mode`: `fast` (no delay), `stealth` (fingerprinted), `aggressive` (proxied).
-    *   `--format, -f`: `table`, `json`, `csv`.
-
----
-
-## 5. Technical Mechanisms
-
-### 5.1 Location Resolution (BFS)
-The API accepts city names ("Zürich") but internally converts them to **BFS Communal Codes** ("261") using a dedicated mapper (`mapper.py`).
-*   **Resolution Order**: Cache -> Postal Code -> Fuzzy Search.
-*   **Reverse Lookup**: Used to determine Canton from raw BFS codes.
-
-### 5.2 Stealth Session
-*   **Headers**: Simulates Chrome 120+ on Windows.
-*   **Client Hints**: Sends `sec-ch-ua` headers matching the User-Agent to pass WAF checks.
-*   **HTTP/2**: Enabled to match browser TLS fingerprints.
-*   **CSRF**: Automatically scrapes `XSRF-TOKEN` cookie and injects `X-XSRF-TOKEN` header for POST requests to Angular backends.
-
-### 5.3 AI Enrichment
-*   **Atomic Processing**: Features are modular. If only `keywords` is requested, the system constructs a minimal prompt.
-*   **Model Agnostic**: Supports `Gemini` (default) and `Groq`.
-*   **Output Validation**: AI output is parsed into a Pydantic model before DB insertion.
-
-### 5.4 Deduplication
-*   **Identity**: `id` from the provider is the primary key.
-*   **Change Detection**: `SHA256(title + description + company)` is compared.
-    *   Mismatch -> Update `content_hash` & `date_updated`.
-    *   Match -> No-op.
+### Identity & Deduplication
+Jobs are identified by the provider's native ID. However, to detect content updates without duplication:
+-   A **Content Hash** (SHA256) is generated from critical fields.
+-   On upsert, if the ID matches but the hash differs, `date_updated` is refreshed and content is overwritten.
+-   If hash matches, the write is a no-op (idempotent).
