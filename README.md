@@ -4,9 +4,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A production-grade, extensible job aggregation engine for the Swiss market.**
+**A production-grade, extensible job scraping engine for the Swiss market.**
 
-Designed for reliability, stealth, and AI integration, this tool scrapes high-quality job data from federal portals (job-room.ch) while handling complexity like BFS codes, anti-bot protection, and multilingual content.
+Designed for reliability and stealth, this tool scrapes high-quality job data from federal portals (job-room.ch) while handling complexity like BFS codes, anti-bot protection, and multilingual content.
 
 ## ✨ Key Features
 
@@ -14,8 +14,9 @@ Designed for reliability, stealth, and AI integration, this tool scrapes high-qu
 - **🇨🇭 Swiss-Optimized**: Native support for **BFS communal codes**, canton filtering, and multilingual content (DE/FR/IT/EN).
 - **🛡️ Stealth Technology**: Built-in browser fingerprint simulation, CSRF handling, and TLS fingerprint evasion.
 - **⚡ Flexible Execution**: Choose between `Fast`, `Stealth`, or `Aggressive` modes depending on your needs.
-- **🤖 Atomic AI Processing**: Optional AI features to translate, extract experience levels, identifying required languages, and generate keywords.
+- **📊 Pagination Detection**: Automatically detects when API limits are reached and reports stop reasons.
 - **🔌 Dual Interface**: Full CLI suite and a REST API (FastAPI) for seamless integration.
+
 
 ---
 
@@ -49,8 +50,8 @@ For complete details on configuration, the REST API, architecture, and database 
 - **System Overview**: Understanding the 4-layer architecture.
 - **API Reference**: Detailed endpoint documentation.
 - **CLI Manual**: All commands and flags explained.
-- **Database Schema**: Full PostgreSQL table definitions.
 - **Technical Deep Dive**: How BFS resolution and Stealth Mode work.
+
 
 ---
 

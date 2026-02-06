@@ -415,6 +415,17 @@ class JobSearchResponse(BaseModel):
     source: str
     search_time_ms: int = 0
     request: JobSearchRequest | None = None
+    
+    # Pagination limit detection
+    pagination_stopped_early: bool = Field(
+        default=False,
+        description="True if scraping stopped before reaching all pages (API limit hit)",
+    )
+    stop_reason: str | None = Field(
+        default=None,
+        description="Reason for early stop: 'max_pages_reached', 'empty_page', 'rate_limited', 'repeated_content'",
+    )
+
 
     @property
     def has_more(self) -> bool:

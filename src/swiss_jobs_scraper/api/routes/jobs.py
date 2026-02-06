@@ -258,28 +258,11 @@ async def search_jobs(
     provider: str = Query(default="job_room", description="Provider to use"),
     mode: str = Query(default="stealth", description="Execution mode"),
     include_raw: bool = Query(default=False, description="Include raw API data"),
-    persist: bool = Query(default=False, description="Save results to database"),
-    ai_process: bool = Query(
-        default=False, description="Apply AI post-processing (translation + analysis)"
-    ),
-    features: str | None = Query(
-        default=None,
-        description=(
-            "Comma-separated list of AI features "
-            "(translation,experience,languages,education,keywords). Defaults to all."
-        ),
-    ),
 ) -> JobSearchResponse:
     """
     Search for jobs matching the given criteria.
 
     Supports all available filters for the selected provider.
-
-    ## Optional Features
-
-    - **persist**: Set to `true` to save results to PostgreSQL (requires database config)
-    - **ai_process**: Set to `true` to apply AI translation and analysis (requires AI config)
-    - **features**: Comma-separated list of AI features to apply (e.g., `translation,keywords`)
 
     ## Examples
 
@@ -301,6 +284,7 @@ async def search_jobs(
     }
     ```
     """
+
     try:
         # Validate provider
         try:
@@ -317,18 +301,6 @@ async def search_jobs(
                 detail="Invalid mode. Choose from: fast, stealth, aggressive",
             ) from None
 
-        # Parse features
-        ai_features = None
-        if features:
-            try:
-                from swiss_jobs_scraper.ai.features import AIFeature
-
-                ai_features = {AIFeature(f.strip()) for f in features.split(",")}
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=400, detail=f"Invalid feature: {str(e)}"
-                ) from e
-
         # Convert to internal request
         search_request = request.to_search_request()
 
@@ -336,45 +308,8 @@ async def search_jobs(
         async with provider_cls(mode=exec_mode, include_raw_data=include_raw) as p:
             result = await p.search(search_request)
 
-        # Optional: Persist to database
-        if persist:
-            try:
-                from swiss_jobs_scraper.storage import get_repository
-                from swiss_jobs_scraper.storage.config import get_database_settings
-
-                db_settings = get_database_settings()
-                if db_settings.is_enabled:
-                    repo = await get_repository()
-                    counts = await repo.upsert_jobs(result.items)
-                    # Add persistence info to response (in raw_data if enabled)
-                    if include_raw and result.request:
-                        result.request = result.request.model_copy(
-                            update={"raw_data": {"persistence": counts}}
-                        )
-            except ImportError:
-                pass  # Database dependencies not installed
-
-        # Optional: AI post-processing
-        if ai_process:
-            try:
-                from swiss_jobs_scraper.ai import get_processor
-
-                processor = get_processor()
-                if processor.is_enabled:
-                    processed_jobs = await processor.process_jobs(
-                        result.items, features=ai_features
-                    )
-                    # Enrich items with AI data (add to raw_data)
-                    for job, processed in zip(
-                        result.items, processed_jobs, strict=True
-                    ):
-                        if job.raw_data is None:
-                            job.raw_data = {}
-                        job.raw_data["ai_processed"] = processed.model_dump(mode="json")
-            except ImportError:
-                pass  # AI dependencies not installed
-
         return result
+
 
     except LocationNotFoundError as e:
         raise HTTPException(
@@ -484,136 +419,3 @@ async def get_job_details(
 # =============================================================================
 
 
-class ProcessingResult(BaseModel):
-    """Result of AI processing operation."""
-
-    processed: int = Field(description="Number of jobs processed")
-    errors: int = Field(description="Number of errors during processing")
-    message: str = Field(description="Status message")
-
-
-class DatabaseStats(BaseModel):
-    """Database statistics."""
-
-    total_jobs: int = Field(description="Total jobs in database")
-    unprocessed_jobs: int = Field(description="Jobs needing AI processing")
-    enabled: bool = Field(description="Whether database is enabled")
-
-
-@router.post(
-    "/process",
-    response_model=ProcessingResult,
-    responses={
-        503: {"model": ErrorResponse, "description": "Database or AI not configured"},
-    },
-)
-async def process_stored_jobs(
-    limit: int = Query(default=100, ge=1, le=1000, description="Max jobs to process"),
-) -> ProcessingResult:
-    """
-    Process unprocessed jobs from the database with AI.
-
-    Applies AI post-processing (translation + experience analysis) to jobs
-    that haven't been processed yet or have been updated since last processing.
-
-    Requires both database and AI to be configured via environment variables.
-    """
-    try:
-        from swiss_jobs_scraper.storage import get_repository
-        from swiss_jobs_scraper.storage.config import get_database_settings
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="Database dependencies not installed. "
-            "Install with: pip install swiss-jobs-scraper[database]",
-        ) from None
-
-    try:
-        from swiss_jobs_scraper.ai import get_processor
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="AI dependencies not installed. "
-            "Install with: pip install swiss-jobs-scraper[ai]",
-        ) from None
-
-    db_settings = get_database_settings()
-    if not db_settings.is_enabled:
-        raise HTTPException(
-            status_code=503,
-            detail="Database not configured. Set DATABASE_URL or DATABASE_PASSWORD.",
-        )
-
-    processor = get_processor()
-    if not processor.is_enabled:
-        raise HTTPException(
-            status_code=503,
-            detail="AI not configured. Set AI_PROVIDER and AI_API_KEY.",
-        )
-
-    # Get unprocessed jobs
-    repo = await get_repository()
-    unprocessed = await repo.get_unprocessed_jobs(limit=limit)
-
-    if not unprocessed:
-        return ProcessingResult(
-            processed=0,
-            errors=0,
-            message="No jobs to process",
-        )
-
-    # Process each job
-    processed_count = 0
-    error_count = 0
-
-    for stored_job in unprocessed:
-        try:
-            # Reconstruct JobListing from raw_data
-            from swiss_jobs_scraper.core.models import JobListing
-
-            if stored_job.raw_data:
-                job = JobListing.model_validate(stored_job.raw_data)
-                result = await processor.process_job(job)
-                await repo.mark_ai_processed(stored_job.id, result)
-                processed_count += 1
-        except Exception:
-            error_count += 1
-
-    return ProcessingResult(
-        processed=processed_count,
-        errors=error_count,
-        message=f"Processed {processed_count} jobs with {error_count} errors",
-    )
-
-
-@router.get(
-    "/stats",
-    response_model=DatabaseStats,
-)
-async def get_database_stats() -> DatabaseStats:
-    """
-    Get database statistics.
-
-    Returns counts of total and unprocessed jobs.
-    """
-    try:
-        from swiss_jobs_scraper.storage import get_repository
-        from swiss_jobs_scraper.storage.config import get_database_settings
-    except ImportError:
-        return DatabaseStats(total_jobs=0, unprocessed_jobs=0, enabled=False)
-
-    db_settings = get_database_settings()
-    if not db_settings.is_enabled:
-        return DatabaseStats(total_jobs=0, unprocessed_jobs=0, enabled=False)
-
-    try:
-        repo = await get_repository()
-        total = await repo.get_jobs_count()
-        unprocessed = await repo.get_unprocessed_count()
-        return DatabaseStats(
-            total_jobs=total,
-            unprocessed_jobs=unprocessed,
-            enabled=True,
-        )
-    except Exception:
-        return DatabaseStats(total_jobs=0, unprocessed_jobs=0, enabled=False)

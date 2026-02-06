@@ -324,21 +324,6 @@ def cli() -> None:
 )
 @click.option("-p", "--provider", default="job_room", help="Job provider to use")
 @click.option("--raw", is_flag=True, help="Include raw API response data")
-@click.option(
-    "--save", is_flag=True, help="Save results to database (requires database config)"
-)
-@click.option(
-    "--ai",
-    "ai_process",
-    is_flag=True,
-    help="Apply AI post-processing (requires AI config)",
-)
-@click.option(
-    "--feature",
-    "features",
-    multiple=True,
-    help="Select specific AI features (translation, experience, languages, education, keywords)",
-)
 def search(
     query: str | None,
     location: str | None,
@@ -359,9 +344,6 @@ def search(
     mode: str,
     provider: str,
     raw: bool,
-    save: bool,
-    ai_process: bool,
-    features: tuple[str, ...],
 ) -> None:
     """
     Search for jobs matching the given criteria.
@@ -414,73 +396,6 @@ def search(
             console.print(f"[red]Error:[/red] {e}")
             sys.exit(1)
 
-    # Optional: Save to database
-    if save:
-        try:
-            from swiss_jobs_scraper.storage import get_repository
-            from swiss_jobs_scraper.storage.config import get_database_settings
-
-            db_settings = get_database_settings()
-            if db_settings.is_enabled:
-
-                async def _persist() -> dict[str, int]:
-                    repo = await get_repository()
-                    return await repo.upsert_jobs(result.items)
-
-                counts = asyncio.run(_persist())
-                console.print(
-                    f"[green]✓[/green] Saved to database: "
-                    f"{counts['inserted']} new, {counts['updated']} updated"
-                )
-            else:
-                console.print(
-                    "[yellow]⚠[/yellow] Database not configured, skipping save"
-                )
-        except ImportError:
-            console.print("[yellow]⚠[/yellow] Database dependencies not installed")
-
-    # Optional: AI processing
-    if ai_process:
-        try:
-            from swiss_jobs_scraper.ai import get_processor
-
-            processor = get_processor()
-            if processor.is_enabled:
-                # Parse features
-                ai_features = None
-                if features:
-                    try:
-                        from swiss_jobs_scraper.ai.features import AIFeature
-
-                        ai_features = {AIFeature(f) for f in features}
-                    except ValueError as e:
-                        console.print(f"[red]Error: Invalid feature:[/red] {e}")
-                        sys.exit(1)
-
-                async def _process() -> None:
-                    processed = await processor.process_jobs(
-                        result.items, features=ai_features
-                    )
-                    for job, p in zip(result.items, processed, strict=True):
-                        if job.raw_data is None:
-                            job.raw_data = {}
-                        job.raw_data["ai_processed"] = p.model_dump(mode="json")
-
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    console=console,
-                    transient=True,
-                ) as progress:
-                    progress.add_task(description="Processing with AI...", total=None)
-                    asyncio.run(_process())
-                console.print(f"[green]✓[/green] AI processed {len(result.items)} jobs")
-            else:
-                console.print(
-                    "[yellow]⚠[/yellow] AI not configured, skipping processing"
-                )
-        except ImportError:
-            console.print("[yellow]⚠[/yellow] AI dependencies not installed")
 
     # Format and output result
     fmt = OutputFormat(output_format)
@@ -682,129 +597,6 @@ def serve(host: str, port: int, reload: bool) -> None:
         reload=reload,
     )
 
-
-@cli.command()
-@click.option(
-    "--limit", type=int, default=100, help="Maximum number of jobs to process"
-)
-def process(limit: int) -> None:
-    """
-    Process unprocessed jobs from the database with AI.
-
-    Requires both database and AI to be configured.
-
-    \\b
-    Examples:
-        swiss-jobs process
-        swiss-jobs process --limit 50
-    """
-    # Check dependencies
-    try:
-        from swiss_jobs_scraper.storage import get_repository
-        from swiss_jobs_scraper.storage.config import get_database_settings
-    except ImportError:
-        console.print(
-            "[red]Error:[/red] Database dependencies not installed. "
-            "Install with: pip install swiss-jobs-scraper[database]"
-        )
-        sys.exit(1)
-
-    try:
-        from swiss_jobs_scraper.ai import get_processor
-    except ImportError:
-        console.print(
-            "[red]Error:[/red] AI dependencies not installed. "
-            "Install with: pip install swiss-jobs-scraper[ai]"
-        )
-        sys.exit(1)
-
-    db_settings = get_database_settings()
-    if not db_settings.is_enabled:
-        console.print(
-            "[red]Error:[/red] Database not configured. "
-            "Set DATABASE_URL or DATABASE_PASSWORD."
-        )
-        sys.exit(1)
-
-    processor = get_processor()
-    if not processor.is_enabled:
-        console.print(
-            "[red]Error:[/red] AI not configured. " "Set AI_PROVIDER and AI_API_KEY."
-        )
-        sys.exit(1)
-
-    async def _process() -> tuple[int, int]:
-        from swiss_jobs_scraper.core.models import JobListing
-
-        repo = await get_repository()
-        unprocessed = await repo.get_unprocessed_jobs(limit=limit)
-
-        if not unprocessed:
-            return (0, 0)
-
-        processed_count = 0
-        error_count = 0
-
-        for stored_job in unprocessed:
-            try:
-                if stored_job.raw_data:
-                    job = JobListing.model_validate(stored_job.raw_data)
-                    result = await processor.process_job(job)
-                    await repo.mark_ai_processed(stored_job.id, result)
-                    processed_count += 1
-            except Exception:
-                error_count += 1
-
-        return (processed_count, error_count)
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-        transient=True,
-    ) as progress:
-        progress.add_task(description="Processing jobs with AI...", total=None)
-        try:
-            processed, errors = asyncio.run(_process())
-        except Exception as e:
-            console.print(f"[red]Error:[/red] {e}")
-            sys.exit(1)
-
-    if processed == 0 and errors == 0:
-        console.print("[dim]No unprocessed jobs found.[/dim]")
-    else:
-        console.print(
-            f"[green]✓[/green] Processed {processed} jobs with {errors} errors"
-        )
-
-
-@cli.command()
-def stats() -> None:
-    """Show database statistics."""
-    try:
-        from swiss_jobs_scraper.storage import get_repository
-        from swiss_jobs_scraper.storage.config import get_database_settings
-    except ImportError:
-        console.print("[dim]Database dependencies not installed.[/dim]")
-        return
-
-    db_settings = get_database_settings()
-    if not db_settings.is_enabled:
-        console.print("[dim]Database not configured.[/dim]")
-        return
-
-    async def _get_stats() -> tuple[int, int]:
-        repo = await get_repository()
-        total = await repo.get_jobs_count()
-        unprocessed = await repo.get_unprocessed_count()
-        return (total, unprocessed)
-
-    try:
-        total, unprocessed = asyncio.run(_get_stats())
-        console.print(f"Total jobs: [bold]{total}[/bold]")
-        console.print(f"Unprocessed: [bold]{unprocessed}[/bold]")
-    except Exception as e:
-        console.print(f"[red]Error:[/red] {e}")
 
 
 if __name__ == "__main__":
